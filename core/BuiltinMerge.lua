@@ -96,6 +96,7 @@ function TrainerSpells:MergeBuiltinData()
                         }
                     else
                         if data.cost then bucket[spellID].cost = data.cost end
+                        if data.rank then bucket[spellID].rank = data.rank end
                         if data.requires then bucket[spellID].requires = data.requires end
                         if data.faction and bucket[spellID].faction == nil then bucket[spellID].faction = data.faction end
                         if data.race and bucket[spellID].race == nil then bucket[spellID].race = data.race end
@@ -123,6 +124,7 @@ function TrainerSpells:MergeBuiltinData()
                         }
                     else
                         if data.cost then bucket[spellID].cost = data.cost end
+                        if data.rank then bucket[spellID].rank = data.rank end
                         if data.faction and bucket[spellID].faction == nil then bucket[spellID].faction = data.faction end
                     end
                 end
@@ -143,6 +145,7 @@ function TrainerSpells:MergeBuiltinData()
                     }
                 else
                     if data.cost then bucket[spellID].cost = data.cost end
+                    if data.rank then bucket[spellID].rank = data.rank end
                     if data.faction and bucket[spellID].faction == nil then bucket[spellID].faction = data.faction end
                 end
             end

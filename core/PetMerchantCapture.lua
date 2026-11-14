@@ -122,8 +122,8 @@ if GameTooltip:HasScript("OnTooltipSetItem") then GameTooltip:HookScript("OnTool
 
 local function ReadPetBook()
     if not UnitExists("pet") then return end
-    local health = UnitHealth("pet")
-    if TrainerSpells:IsSecret(health) or health <= 0 then return end
+    local dead = UnitIsDead and UnitIsDead("pet")
+    if dead == true and not TrainerSpells:IsSecret(dead) then return end
     local petSpells, petSpellIDs = {}, {}
     local function RankFromText(text)
         if type(text) ~= "string" or TrainerSpells:IsSecret(text) then return nil end

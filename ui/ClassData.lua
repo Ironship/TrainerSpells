@@ -242,11 +242,12 @@ function TrainerSpells:ClassifyEntries(dataTable, searchText, selectedLevel, ski
             isIgnored = TrainerSpells_IsIgnored(entry.spellID, entry.name)
             local rankState = rankIgnoreStates[entry.name]
             if not rankState then
-                rankState = {}
+                rankState = {entries = {}}
                 rankIgnoreStates[entry.name] = rankState
             end
 
             entry.rankIgnoreState = rankState
+            table.insert(rankState.entries, entry)
             if isIgnored then
                 rankState.hasIgnored = true
             else

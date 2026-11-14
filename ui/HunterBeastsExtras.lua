@@ -9,7 +9,14 @@ Beasts.maxMapPins = 400
 function Beasts.Store()
     local settings = TrainerSpells_Character
     settings.beastKnown = settings.beastKnown or {}
-    settings.beastTamed = settings.beastTamed or {}
+    if not Beasts.storeCleaned then
+        Beasts.storeCleaned = true
+        settings.beastTamed = nil
+        for source in pairs(settings.beastKnown) do
+            if source == "tamed" or source:find("^pet:") then settings.beastKnown[source] = nil end
+        end
+    end
+    settings.beastKnown.learned = settings.beastKnown.learned or {}
     settings.beastFavorites = settings.beastFavorites or {}
     settings.beastFavorites.beasts = settings.beastFavorites.beasts or {}
     settings.beastFavorites.spells = settings.beastFavorites.spells or {}
@@ -134,52 +141,49 @@ function Beasts.ScanCraft()
     Beasts.SetKnownSource("craft", found)
 end
 
-function Beasts.ScanPetBook()
-    local found = {}
-    local book = C_SpellBook
-    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet
-    if book and book.HasPetSpells and book.GetSpellBookItemInfo and bank then
-        for index = 1, book.HasPetSpells() or 0 do
-            local ok, info = pcall(book.GetSpellBookItemInfo, index, bank)
-            if ok and type(info) == "table" then
-                local spell = info.spellID or info.actionID
-                if Beasts.IsUsable(spell) and Beasts.rankBySpell[spell] then
-                    found[spell] = true
-                else
-                    spell = Beasts.RankByName(info.name, info.subName)
-                    if spell then found[spell] = true end
-                end
-            end
-        end
-    else
-        local count = HasPetSpells and HasPetSpells() or 0
-        local getName = GetSpellBookItemName or GetSpellName
-        for index = 1, getName and count or 0 do
-            local ok, name, rankText = pcall(getName, index, BOOKTYPE_PET or "pet")
-            local spell = ok and Beasts.RankByName(name, rankText)
-            if spell then found[spell] = true end
-        end
-    end
-    local petName = UnitName("pet")
-    if Beasts.IsUsable(petName) and petName then Beasts.SetKnownSource("pet:" .. petName, found) end
+function Beasts.MarkLearned(spell)
+    if not spell or not Beasts.rankBySpell[spell] then return end
+    local learned = Beasts.Store().beastKnown.learned
+    if learned[spell] then return end
+    learned[spell] = true
+    Beasts.ScheduleRefresh()
 end
 
-function Beasts.ScanStable()
-    local stable = C_StableInfo
-    if not stable then return end
-    local tamed = Beasts.Store().beastTamed
-    for _, method in ipairs({"GetActivePetList", "GetStabledPetList"}) do
-        local ok, list = pcall(stable[method] or error)
-        for _, pet in ipairs(ok and type(list) == "table" and list or {}) do
-            local creatureID = pet.creatureID
-            if Beasts.IsUsable(creatureID) and Beasts.beastById[creatureID] then tamed[creatureID] = true end
+function Beasts.LearnPatterns()
+    if Beasts.learnPatterns then return Beasts.learnPatterns end
+    Beasts.learnPatterns = {}
+    for _, format in ipairs({ERR_LEARN_SPELL_S, ERR_LEARN_ABILITY_S}) do
+        if type(format) == "string" then
+            local pattern = "^" .. format:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1"):gsub("%%%%s", "(.+)") .. "$"
+            table.insert(Beasts.learnPatterns, pattern)
         end
     end
-    local found = {}
-    for creatureID in pairs(tamed) do
-        for _, spell in ipairs(Beasts.beastById[creatureID] and Beasts.beastById[creatureID].spells or {}) do found[spell] = true end
+    return Beasts.learnPatterns
+end
+
+function Beasts.SpellFromLearnText(text)
+    local id = tonumber(text:match("|Hspell:(%d+)"))
+    if id and Beasts.rankBySpell[id] then return id end
+    local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|H.-|h", ""):gsub("|h", ""):gsub("[%[%]]", "")
+    local name, rankText = plain:match("^(.-)%s*%((.-)%)%s*$")
+    name = name or plain
+    if not rankText and id then
+        local getSubtext = C_Spell and C_Spell.GetSpellSubtext or GetSpellSubtext
+        local ok, subtext = pcall(getSubtext or error, id)
+        if ok and Beasts.IsUsable(subtext) then rankText = subtext end
     end
-    Beasts.SetKnownSource("tamed", found)
+    return Beasts.RankByName(name, rankText)
+end
+
+function Beasts.OnSystemMessage(message)
+    if not Beasts.IsUsable(message) or type(message) ~= "string" then return end
+    for _, pattern in ipairs(Beasts.LearnPatterns()) do
+        local text = message:match(pattern)
+        if text then
+            Beasts.MarkLearned(Beasts.SpellFromLearnText(text))
+            return
+        end
+    end
 end
 
 function Beasts.ScanTrainer()
@@ -202,7 +206,7 @@ function Beasts.ScanTrainer()
 end
 
 function Beasts.ScanKnown()
-    for _, scan in ipairs({Beasts.ScanCraft, Beasts.ScanPetBook, Beasts.ScanStable, Beasts.ScanTrainer}) do
+    for _, scan in ipairs({Beasts.ScanCraft, Beasts.ScanTrainer}) do
         local ok, err = pcall(scan)
         if not ok and geterrorhandler then geterrorhandler()(err) end
     end
@@ -228,11 +232,16 @@ function Beasts.ScheduleScan()
 end
 
 Beasts.eventFrame = CreateFrame("Frame")
-for _, event in ipairs({"PLAYER_ENTERING_WORLD", "CRAFT_SHOW", "CRAFT_UPDATE", "PET_BAR_UPDATE", "UNIT_PET", "SPELLS_CHANGED", "PET_STABLE_SHOW", "PET_STABLE_UPDATE", "TRAINER_SHOW", "TRAINER_UPDATE", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT"}) do
+for _, event in ipairs({"PLAYER_ENTERING_WORLD", "CRAFT_SHOW", "CRAFT_UPDATE", "SPELLS_CHANGED", "LEARNED_SPELL_IN_TAB", "CHAT_MSG_SYSTEM", "TRAINER_SHOW", "TRAINER_UPDATE", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT"}) do
     pcall(Beasts.eventFrame.RegisterEvent, Beasts.eventFrame, event)
 end
 Beasts.eventFrame:SetScript("OnEvent", function(_, event, unit)
-    if event == "PLAYER_TARGET_CHANGED" then
+    if event == "CHAT_MSG_SYSTEM" then
+        if select(2, UnitClass("player")) == "HUNTER" then Beasts.OnSystemMessage(unit) end
+    elseif event == "LEARNED_SPELL_IN_TAB" then
+        if Beasts.IsUsable(unit) then Beasts.MarkLearned(unit) end
+        Beasts.ScheduleScan()
+    elseif event == "PLAYER_TARGET_CHANGED" then
         Beasts.RecordSpeed("target", Beasts.UnitBeast("target"))
     elseif event == "UPDATE_MOUSEOVER_UNIT" then
         Beasts.RecordSpeed("mouseover", Beasts.UnitBeast("mouseover"))

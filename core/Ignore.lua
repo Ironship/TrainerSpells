@@ -25,6 +25,26 @@ function TrainerSpells_ToggleIgnoreSpell(spellID, name)
     end
 end
 
+function TrainerSpells_IgnoreRankAndHigher(entry, entries)
+    local _, classToken = UnitClass("player")
+    if not classToken or not entry or not entry.name then return end
+    local ignoredNames = TrainerSpells_IgnoredNames[classToken]
+    local ignoredRanks = ignoredNames and ignoredNames[entry.name]
+    if ignoredRanks == true then return end
+    TrainerSpells_Ignored[classToken] = TrainerSpells_Ignored[classToken] or {}
+    local ignored = TrainerSpells_Ignored[classToken]
+    for _, other in ipairs(entries or {entry}) do
+        local spellID = tonumber(other.spellID)
+        if spellID and other.name == entry.name and (other == entry or (other.hasRealRank and other.rankNum >= entry.rankNum)) then
+            if type(ignoredRanks) == "table" then
+                ignoredRanks[spellID] = nil
+            else
+                ignored[spellID] = true
+            end
+        end
+    end
+end
+
 function TrainerSpells_SetIgnoreName(name, ignore)
     local _, classToken = UnitClass("player")
     if not classToken or not name then return end

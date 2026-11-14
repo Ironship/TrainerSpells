@@ -478,12 +478,19 @@ local function IgnoreMenu_Initialize(sel, level, rootDescription, entry)
 
         AddButton(info)
         local rankState = entry.rankIgnoreState or {hasIgnored = spellIgnored, hasUnignored = not spellIgnored}
-        if rankState.hasUnignored then
+        local hasHigherUnignored = false
+        if entry.hasRealRank then
+            for _, other in ipairs(rankState.entries or {}) do
+                if other ~= entry and other.hasRealRank and other.rankNum >= entry.rankNum and not TrainerSpells_IsIgnored(other.spellID, other.name) then hasHigherUnignored = true end
+            end
+        end
+
+        if hasHigherUnignored then
             info = CreateInfo()
-            info.text = TrainerSpells:Trans("LID_IGNOREALLRANKS")
+            info.text = TrainerSpells:Trans("LID_IGNORETHISRANKANDHIGHER")
             info.notCheckable = true
             info.func = function()
-                TrainerSpells_SetIgnoreName(entry.name, true)
+                TrainerSpells_IgnoreRankAndHigher(entry, rankState.entries)
                 TrainerSpells_Refresh()
             end
 
