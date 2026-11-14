@@ -336,9 +336,9 @@ local function FitRowLevel(rowFrame)
 end
 
 local function GetLocalizedRankText(spellID, rankNum, hasRealRank)
+    if hasRealRank and rankNum then return (_G.RANK or "Rank") .. " " .. rankNum end
     local subtext = GetSpellSubtext and spellID and GetSpellSubtext(spellID)
     if subtext and subtext ~= "" then return subtext end
-    if hasRealRank and rankNum then return (_G.RANK or "Rank") .. " " .. rankNum end
     return nil
 end
 
