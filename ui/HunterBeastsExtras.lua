@@ -131,6 +131,7 @@ function Beasts.ScanCraft()
     local beastTraining = TrainerSpells:GetSpellInfo(5149)
     if not beastTraining or GetCraftDisplaySkillLine() ~= beastTraining then return end
     local found = {}
+    for spell in pairs(Beasts.Store().beastKnown.craft or {}) do found[spell] = true end
     for index = 1, GetNumCrafts() or 0 do
         local name, rankText, craftType = GetCraftInfo(index)
         if craftType ~= "header" then
