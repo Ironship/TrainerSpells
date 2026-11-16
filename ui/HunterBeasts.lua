@@ -435,6 +435,7 @@ function Beasts.InitRankRow(rowFrame, elementData, icon, nameFS, levelFS)
             Beasts.ToggleFavoriteSpell(rank.spell)
             return
         end
+        if button == "LeftButton" and TrainerSpells:TryInsertSpellLink(rank.spell) then return true end
         if button == "LeftButton" and IsShiftKeyDown() then
             Beasts.ShowOnMap(Beasts.Teachers(rank.spell), Beasts.AbilityName(key) .. " " .. rank.rank)
             return

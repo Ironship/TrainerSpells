@@ -639,6 +639,15 @@ end
 
 TrainerSpells.GamepadRowTargetWidth = 24
 TrainerSpells.GamepadRowInset = 10
+function TrainerSpells:TryInsertSpellLink(spellID)
+    if not spellID or not IsModifiedClick("CHATLINK") then return false end
+    local getSpellLink = (C_Spell and C_Spell.GetSpellLink) or GetSpellLink
+    local insertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
+    if not getSpellLink or not insertLink then return false end
+    local link = getSpellLink(spellID)
+    return link and insertLink(link)
+end
+
 function TrainerSpells:ApplyRowInteraction(rowFrame)
     local gamepad = TrainerSpells.IsGamepadNavActive()
     local onEnter, onLeave, onMouseUp = rowFrame:GetScript("OnEnter"), rowFrame:GetScript("OnLeave"), rowFrame:GetScript("OnMouseUp")
@@ -701,7 +710,7 @@ function TrainerSpells:ApplyRowInteraction(rowFrame)
     hit:SetScript("OnEnter", onEnter and function() onEnter(rowFrame) end or nil)
     hit:SetScript("OnLeave", onLeave and function() onLeave(rowFrame) end or nil)
     hit:SetScript("OnMouseUp", function(_, button)
-        if onMouseUp then onMouseUp(rowFrame, button) end
+        if onMouseUp and onMouseUp(rowFrame, button) then return end
         if locationClick and button == "LeftButton" then locationClick() end
     end)
 
@@ -1137,6 +1146,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         end)
 
         rowFrame:SetScript("OnMouseUp", function(sel, button)
+            if button == "LeftButton" and TrainerSpells:TryInsertSpellLink(entry.spellID) then return true end
             if button == "LeftButton" and entry.questStart and entry.questStart.uiMapID then
                 TrainerSpells:SetMapWaypoint(entry.questStart)
             elseif button == "RightButton" then
