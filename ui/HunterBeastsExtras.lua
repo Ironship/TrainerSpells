@@ -127,9 +127,10 @@ function Beasts.SetKnownSource(source, found)
 end
 
 function Beasts.ScanCraft()
-    if not GetNumCrafts or not GetCraftInfo or not GetCraftDisplaySkillLine then return end
+    if not GetNumCrafts or not GetCraftInfo then return end
     local beastTraining = TrainerSpells:GetSpellInfo(5149)
-    if not beastTraining or GetCraftDisplaySkillLine() ~= beastTraining then return end
+    local getCraftSkillLine = GetCraftSkillLine or GetCraftName or GetCraftDisplaySkillLine
+    if not beastTraining or not getCraftSkillLine or getCraftSkillLine() ~= beastTraining then return end
     local found = {}
     for spell in pairs(Beasts.Store().beastKnown.craft or {}) do found[spell] = true end
     for index = 1, GetNumCrafts() or 0 do
@@ -189,21 +190,22 @@ end
 
 function Beasts.ScanTrainer()
     if select(2, UnitClass("player")) ~= "HUNTER" or not GetNumTrainerServices or not GetTrainerServiceInfo then return end
-    local store = Beasts.Store().beastKnown
-    local found = store.trainer or {}
-    local changed = false
+    local petType = Enum and Enum.TrainerType and Enum.TrainerType.Pet
+    local isBeastTraining = petType ~= nil and C_Trainer and C_Trainer.GetTrainerType and C_Trainer.GetTrainerType() == petType
+    local source = isBeastTraining and "craft" or "trainer"
+    local found = {}
+    for spell in pairs(Beasts.Store().beastKnown[source] or {}) do found[spell] = true end
     for index = 1, GetNumTrainerServices() or 0 do
-        local _, _, serviceType = TrainerSpells:GetTrainerServiceInfo(index)
-        local spell = serviceType == "used" and TrainerSpells:GetSpellIDForService(index)
-        if spell and Beasts.rankBySpell[spell] and not found[spell] then
-            found[spell] = true
-            changed = true
+        local name, rankText, serviceType = TrainerSpells:GetTrainerServiceInfo(index)
+        if serviceType == "used" or (isBeastTraining and (serviceType == "available" or serviceType == "unavailable")) then
+            local spell = TrainerSpells:GetSpellIDForService(index, true)
+            if not spell or not Beasts.rankBySpell[spell] then
+                spell = Beasts.RankByName(name, rankText)
+            end
+            if spell then found[spell] = true end
         end
     end
-    if changed then
-        store.trainer = found
-        Beasts.ScheduleRefresh()
-    end
+    Beasts.SetKnownSource(source, found)
 end
 
 function Beasts.ScanKnown()
