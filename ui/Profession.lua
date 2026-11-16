@@ -427,28 +427,45 @@ TrainerSpells.TrainerLocations.AddResolveListener(function()
     if professionFrame:IsVisible() and professionViewMode == PROFESSION_VIEW_TRAINERS then TrainerSpells_ProfessionRefresh() end
 end)
 
-professionPicker.firstAidUnlocks = {
-    [150] = {
-        maxRank = 225, skill = 125, itemID = 16084,
-        Alliance = {npcName = "Deneb Walker", uiMapID = 1417, x = 27, y = 58.8},
-        Horde = {npcName = "Balai Lok'Wein", uiMapID = 1445, x = 36.4, y = 30.4},
+professionPicker.rankUnlocks = {
+    ["First Aid"] = {
+        [150] = {
+            maxRank = 225, skill = 125, itemID = 16084, bookLabel = "LID_PROF_UNLOCK_BOOK", vendorRecipes = {7929, 10840},
+            Alliance = {npcName = "Deneb Walker", uiMapID = 1417, x = 27, y = 58.8},
+            Horde = {npcName = "Balai Lok'Wein", uiMapID = 1445, x = 36.4, y = 30.4},
+        },
+        [225] = {
+            maxRank = 300, skill = 225, level = 35,
+            Alliance = {questID = 6624, npcName = "Doctor Gustaf VanHowzen", uiMapID = 1445, x = 67.6, y = 48.8},
+            Horde = {questID = 6622, npcName = "Doctor Gregory Victor", uiMapID = 1417, x = 73.4, y = 36.8},
+        },
     },
-    [225] = {
-        maxRank = 300, skill = 225, level = 35,
-        Alliance = {questID = 6624, npcName = "Doctor Gustaf VanHowzen", uiMapID = 1445, x = 67.6, y = 48.8},
-        Horde = {questID = 6622, npcName = "Doctor Gregory Victor", uiMapID = 1417, x = 73.4, y = 36.8},
+    Cooking = {
+        [150] = {
+            maxRank = 225, skill = 125, itemID = 16072,
+            Alliance = {npcName = "Shandrina", uiMapID = 1440, x = 49.6, y = 67},
+            Horde = {npcName = "Wulan", uiMapID = 1443, x = 26.2, y = 69.8},
+        },
     },
 }
 
-function professionPicker.HasFirstAidBook()
-    local getItemCount = (C_Item and C_Item.GetItemCount) or GetItemCount
-    return getItemCount and (getItemCount(professionPicker.firstAidUnlocks[150].itemID) or 0) > 0
+professionPicker.unlockBooksInBags = {}
+for _, ranks in pairs(professionPicker.rankUnlocks) do
+    for _, unlock in pairs(ranks) do
+        if unlock.itemID then professionPicker.unlockBooksInBags[unlock.itemID] = false end
+    end
 end
 
-function professionPicker.AddFirstAidUnlock(items, searchText)
-    if not TrainerSpells.Pricing.IsForever() then return end
-    local info = professionPicker.GetInfo("First Aid")
-    local unlock = professionPicker.firstAidUnlocks[info.maxRank]
+function professionPicker.HasUnlockBook(itemID)
+    local getItemCount = (C_Item and C_Item.GetItemCount) or GetItemCount
+    return getItemCount ~= nil and (getItemCount(itemID) or 0) > 0
+end
+
+function professionPicker.AddRankUnlock(items, searchText, professionKey)
+    local ranks = professionPicker.rankUnlocks[professionKey]
+    if not ranks or not TrainerSpells.Pricing.IsForever() then return end
+    local info = professionPicker.GetInfo(professionKey)
+    local unlock = ranks[info.maxRank]
     if not unlock then return end
     local faction = TrainerSpells:GetPlayerFaction()
     local location = faction and unlock[faction]
@@ -458,13 +475,13 @@ function professionPicker.AddFirstAidUnlock(items, searchText)
     if unlock.itemID then
         local getItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
         if getItemInfo then name, itemLink = getItemInfo(unlock.itemID) end
-        name = name or TrainerSpells:Trans("LID_PROF_UNLOCK_BOOK")
+        name = name or (unlock.bookLabel and TrainerSpells:Trans(unlock.bookLabel)) or info.name .. " · " .. TrainerSpells:Trans("LID_PROFRANK_3")
         icon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(unlock.itemID)
-        if professionPicker.HasFirstAidBook() then status = TrainerSpells:Trans("LID_PROF_UNLOCK_IN_BAGS") end
-        local heavySilk = TrainerSpells:GetSpellInfo(7929)
-        local mageweave = TrainerSpells:GetSpellInfo(10840)
-        if location and heavySilk and mageweave then
-            details = TrainerSpells:Trans("LID_PROF_UNLOCK_SAME_VENDOR"):format(heavySilk, mageweave)
+        if professionPicker.HasUnlockBook(unlock.itemID) then status = TrainerSpells:Trans("LID_PROF_UNLOCK_IN_BAGS") end
+        if location and unlock.vendorRecipes then
+            local first = TrainerSpells:GetSpellInfo(unlock.vendorRecipes[1])
+            local second = TrainerSpells:GetSpellInfo(unlock.vendorRecipes[2])
+            if first and second then details = TrainerSpells:Trans("LID_PROF_UNLOCK_SAME_VENDOR"):format(first, second) end
         end
     else
         local title = location and C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(location.questID)
@@ -498,8 +515,8 @@ end
 function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, professionKey, skillLineName, currentSkill)
     searchText = (searchText or ""):lower()
     local items = {}
-    if professionKey == "First Aid" and viewMode ~= PROFESSION_VIEW_RECIPES then
-        professionPicker.AddFirstAidUnlock(items, searchText)
+    if professionKey and viewMode ~= PROFESSION_VIEW_RECIPES then
+        professionPicker.AddRankUnlock(items, searchText, professionKey)
     end
     if viewMode == PROFESSION_VIEW_RECIPES then
         local data = professionKey and TrainerSpells_RecipeData and TrainerSpells_RecipeData[professionKey]
@@ -1641,14 +1658,18 @@ end
 
 tradeSkillWatcher:SetScript("OnEvent", function(_, event, itemID, success)
     if event == "BAG_UPDATE_DELAYED" then
-        local inBags = professionPicker.HasFirstAidBook()
-        if inBags ~= professionPicker.firstAidBookInBags then
-            professionPicker.firstAidBookInBags = inBags
-            TrainerSpells_ProfessionRefresh()
+        local changed = false
+        for bookID, previous in pairs(professionPicker.unlockBooksInBags) do
+            local inBags = professionPicker.HasUnlockBook(bookID)
+            if inBags ~= previous then
+                professionPicker.unlockBooksInBags[bookID] = inBags
+                changed = true
+            end
         end
+        if changed then TrainerSpells_ProfessionRefresh() end
         return
     elseif event == "GET_ITEM_INFO_RECEIVED" then
-        if success and itemID == professionPicker.firstAidUnlocks[150].itemID then TrainerSpells_ProfessionRefresh() end
+        if success and itemID and professionPicker.unlockBooksInBags[itemID] ~= nil then TrainerSpells_ProfessionRefresh() end
         return
     elseif event == "SKILL_LINES_CHANGED" or event == "PLAYER_LEVEL_UP" then
         TrainerSpells_ProfessionRefresh()
