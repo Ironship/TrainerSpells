@@ -207,7 +207,7 @@ TrainerSpells.QuestSpellStarts = {
     [23161] = {questID = 7631, questName = "Dreadsteed of Xoroth"},
     [23214] = {questID = 7647, questName = "Judgment and Redemption"},
     [28272] = {questID = 9364, questName = "Fragmented Magic"},
-    [1277324] = {questID = 5679, questName = "Devouring Plague"},
+    [1277324] = {questID = 5679, questName = "Dark Sacrifice"},
     [1277331] = {questID = 5645, questName = "Chastise", uiMapID = 1455, x = 25.21, y = 10.76},
     [1277370] = {questID = 94774, questName = "Divine Grace", uiMapID = 1429, x = 43.28, y = 65.72},
     [1277455] = {questID = 94824, questName = "Confounding Flash"},

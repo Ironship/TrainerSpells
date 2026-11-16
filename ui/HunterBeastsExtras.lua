@@ -174,22 +174,6 @@ function Beasts.LearnPatterns()
     return Beasts.learnPatterns
 end
 
-function Beasts.RankFromPetBook(name)
-    local book = C_SpellBook
-    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet
-    local key = Beasts.nameIndex and Beasts.nameIndex[name]
-    if not key or not bank or not book or not book.IsSpellInSpellBook then return end
-    local match
-    for _, rank in ipairs(data.abilities[key].ranks) do
-        local present = book.IsSpellInSpellBook(rank.spell, bank, false)
-        if Beasts.IsUsable(present) and present then
-            if match then return end
-            match = rank.spell
-        end
-    end
-    return match
-end
-
 function Beasts.SpellFromLearnText(text)
     local id = tonumber(text:match("|Hspell:(%d+)"))
     if id and Beasts.rankBySpell[id] then return id end
@@ -201,9 +185,7 @@ function Beasts.SpellFromLearnText(text)
         local ok, subtext = pcall(getSubtext or error, id)
         if ok and Beasts.IsUsable(subtext) then rankText = subtext end
     end
-    local spell = Beasts.RankByName(name, rankText)
-    if spell or (type(rankText) == "string" and rankText:find("%d")) then return spell end
-    return Beasts.RankFromPetBook(name)
+    return Beasts.RankByName(name, rankText)
 end
 
 function Beasts.OnSystemMessage(message)
