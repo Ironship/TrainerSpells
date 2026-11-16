@@ -1212,14 +1212,21 @@ function TrainerSpells:ApplyFontStringTheme(fontString, light)
         fontString.tsBaseShadow = {r or 0, g or 0, b or 0, a or 1, x or 0, y or 0}
     end
     local base, shadow = fontString.tsBaseColor, fontString.tsBaseShadow
+    local font, size, flags = fontString:GetFont()
     if light then
+        if flags and flags:find("OUTLINE", 1, true) then
+            local plainFlags = flags:gsub("THICKOUTLINE", ""):gsub("OUTLINE", ""):gsub("^,+", ""):gsub(",+$", "")
+            if fontString:SetFont(font, size, plainFlags) then fontString.tsOutlineFlags = flags end
+        end
         fontString:SetTextColor(self:ToLightBackgroundColor(base[1], base[2], base[3]))
-    end
-    if light then
         fontString:SetShadowColor(0, 0, 0, 0)
         fontString:SetShadowOffset(0, 0)
     else
-        if not light then fontString:SetTextColor(base[1], base[2], base[3], base[4]) end
+        if fontString.tsOutlineFlags then
+            fontString:SetFont(font, size, fontString.tsOutlineFlags)
+            fontString.tsOutlineFlags = nil
+        end
+        fontString:SetTextColor(base[1], base[2], base[3], base[4])
         fontString:SetShadowColor(shadow[1], shadow[2], shadow[3], shadow[4])
         fontString:SetShadowOffset(shadow[5], shadow[6])
     end

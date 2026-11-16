@@ -16,6 +16,15 @@ function Beasts.Store()
             if source == "tamed" or source:find("^pet:") then settings.beastKnown[source] = nil end
         end
     end
+    if not settings.beastKnownExactRanks then
+        for _, found in pairs(settings.beastKnown) do
+            for spell in pairs(found) do
+                local entry = Beasts.rankBySpell[spell]
+                if entry and entry.rank.rank == 1 and #data.abilities[entry.key].ranks > 1 then found[spell] = nil end
+            end
+        end
+        settings.beastKnownExactRanks = true
+    end
     settings.beastKnown.learned = settings.beastKnown.learned or {}
     settings.beastFavorites = settings.beastFavorites or {}
     settings.beastFavorites.beasts = settings.beastFavorites.beasts or {}
@@ -107,8 +116,10 @@ function Beasts.RankByName(name, rankText)
     end
     local key = Beasts.nameIndex[name]
     if not key then return nil end
-    local number = Beasts.IsUsable(rankText) and type(rankText) == "string" and tonumber(rankText:match("%d+")) or 1
-    for _, rank in ipairs(data.abilities[key].ranks) do
+    local ranks = data.abilities[key].ranks
+    local number = Beasts.IsUsable(rankText) and type(rankText) == "string" and tonumber(rankText:match("%d+"))
+    if not number then return #ranks == 1 and ranks[1].spell or nil end
+    for _, rank in ipairs(ranks) do
         if rank.rank == number then return rank.spell end
     end
 end
@@ -163,6 +174,22 @@ function Beasts.LearnPatterns()
     return Beasts.learnPatterns
 end
 
+function Beasts.RankFromPetBook(name)
+    local book = C_SpellBook
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet
+    local key = Beasts.nameIndex and Beasts.nameIndex[name]
+    if not key or not bank or not book or not book.IsSpellInSpellBook then return end
+    local match
+    for _, rank in ipairs(data.abilities[key].ranks) do
+        local present = book.IsSpellInSpellBook(rank.spell, bank, false)
+        if Beasts.IsUsable(present) and present then
+            if match then return end
+            match = rank.spell
+        end
+    end
+    return match
+end
+
 function Beasts.SpellFromLearnText(text)
     local id = tonumber(text:match("|Hspell:(%d+)"))
     if id and Beasts.rankBySpell[id] then return id end
@@ -174,7 +201,9 @@ function Beasts.SpellFromLearnText(text)
         local ok, subtext = pcall(getSubtext or error, id)
         if ok and Beasts.IsUsable(subtext) then rankText = subtext end
     end
-    return Beasts.RankByName(name, rankText)
+    local spell = Beasts.RankByName(name, rankText)
+    if spell or (type(rankText) == "string" and rankText:find("%d")) then return spell end
+    return Beasts.RankFromPetBook(name)
 end
 
 function Beasts.OnSystemMessage(message)
@@ -198,10 +227,8 @@ function Beasts.ScanTrainer()
     for index = 1, GetNumTrainerServices() or 0 do
         local name, rankText, serviceType = TrainerSpells:GetTrainerServiceInfo(index)
         if serviceType == "used" or (isBeastTraining and (serviceType == "available" or serviceType == "unavailable")) then
-            local spell = TrainerSpells:GetSpellIDForService(index, true)
-            if not spell or not Beasts.rankBySpell[spell] then
-                spell = Beasts.RankByName(name, rankText)
-            end
+            local spell = Beasts.RankByName(name, rankText) or TrainerSpells:GetSpellIDForService(index, true)
+            if not Beasts.rankBySpell[spell] then spell = nil end
             if spell then found[spell] = true end
         end
     end

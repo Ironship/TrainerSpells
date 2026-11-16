@@ -586,7 +586,8 @@ local function PositionPlayerSpellsFrame()
                 if tab and tab:IsShown() then barWidth = barWidth + tab:GetWidth() end
             end
         end
-        if panelWidth > 0 then sliderWidth = math.max(40, math.min(168, panelWidth - 86 - 33 - barWidth - 16)) end
+        local titleLeft = 33 + (tabsLayout and 0 or barWidth + 12)
+        if panelWidth > 0 then sliderWidth = math.max(40, math.min(168, panelWidth - 98 - titleLeft - 120)) end
         slider:ClearAllPoints()
         slider:SetPoint("RIGHT", panel, "TOPRIGHT", -86 / sliderScale, 16 / sliderScale)
         slider:SetWidth(sliderWidth / sliderScale)
@@ -1294,9 +1295,11 @@ local function InstallPlayerSpellsIntegration()
     playerSpellsSubTabs.PrewarmRows()
     TrainerSpells:PrepareGamepadNavigation(playerSpellsModeTabContainer)
     TrainerSpells:PrepareGamepadNavigation(classFrame)
-    book:HookScript("OnHide", ClosePlayerSpellsPanel)
-    hooksecurefunc(tabSystem, "SetTab", ClosePlayerSpellsPanel)
-    PlayerSpellsFrame:HookScript("OnHide", ClosePlayerSpellsPanel)
+    local function QueueClose()
+        if playerSpellsContentHidden then C_Timer.After(0, ClosePlayerSpellsPanel) end
+    end
+    book:HookScript("OnHide", QueueClose)
+    hooksecurefunc(tabSystem, "SetTab", QueueClose)
     book:HookScript("OnShow", QueueFitNativeSearchBox)
     book:HookScript("OnSizeChanged", QueueFitNativeSearchBox)
     playerSpellsSubTabs.InstallGamepadCycling(book)
