@@ -639,13 +639,15 @@ end
 
 TrainerSpells.GamepadRowTargetWidth = 24
 TrainerSpells.GamepadRowInset = 10
+function TrainerSpells:TryInsertChatLink(link)
+    local insertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
+    return link and insertLink and IsModifiedClick("CHATLINK") and insertLink(link)
+end
+
 function TrainerSpells:TryInsertSpellLink(spellID)
     if not spellID or not IsModifiedClick("CHATLINK") then return false end
     local getSpellLink = (C_Spell and C_Spell.GetSpellLink) or GetSpellLink
-    local insertLink = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
-    if not getSpellLink or not insertLink then return false end
-    local link = getSpellLink(spellID)
-    return link and insertLink(link)
+    return getSpellLink and self:TryInsertChatLink(getSpellLink(spellID))
 end
 
 function TrainerSpells:ApplyRowInteraction(rowFrame)
@@ -1025,7 +1027,10 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         local rankText = #subtexts > 0 and (" " .. Colors.RANK .. "(" .. table.concat(subtexts, ") (") .. ")|r") or ""
         local nameColor = elementData.dimName and Colors.DIM_NAME or Colors.SPELL_NAME
         nameFS:SetText(nameColor .. entry.name .. "|r" .. rankText)
-        if elementData.showLevel then
+        if entry.levelText then
+            rowFrame.levelFull = entry.levelText
+            levelFS:SetText(rowFrame.levelFull)
+        elseif elementData.showLevel then
             if elementData.levelLabel then
                 local levelPrefix = entry.levelReq and (TrainerSpells:Trans("LID_LVL") .. " " .. entry.levelReq .. " ") or ""
                 rowFrame.levelFull = Colors.RANK .. levelPrefix .. elementData.levelLabel .. " " .. entry.level .. "|r"
@@ -1067,7 +1072,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
             nameFS:SetPoint("RIGHT", sourceFS, "LEFT", -8, 0)
         end
 
-        local locations = entry.isProfessionRecipe and entry.sourceLocations
+        local locations = entry.sourceLocations
         if locations and #locations > 0 then
             local locationSize = math.max(12, math.min(20, (rowFrame:GetHeight() or TrainerSpells.RowHeight) - 4))
             local shown = math.min(3, #locations)
@@ -1101,6 +1106,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
 
             sourceFS:ClearAllPoints()
             sourceFS:SetPoint("RIGHT", rowFrame.locationButtons[shown], "LEFT", -5, 0)
+            if not sourceFS:IsShown() then nameFS:SetPoint("RIGHT", rowFrame.locationButtons[shown], "LEFT", -5, 0) end
         end
 
         if sourceFS:IsShown() then rowFrame.levelShort = nil end
@@ -1123,6 +1129,9 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
                 }
 
                 GameTooltip:SetSpellByID(entry.spellID)
+            elseif entry.itemID then
+                pendingSpellTooltipExtra = nil
+                GameTooltip:SetItemByID(entry.itemID)
             else
                 pendingSpellTooltipExtra = nil
                 GameTooltip:SetText(entry.name)
@@ -1137,6 +1146,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
                 if entry.source then GameTooltip:AddLine(TrainerSpells:Trans("LID_SOURCE") .. ": " .. entry.source, 0.9, 0.9, 0.9, true) end
             end
 
+            if entry.details then GameTooltip:AddLine(entry.details, 1, 1, 1, true) end
             GameTooltip:Show()
         end)
 
@@ -1146,10 +1156,10 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         end)
 
         rowFrame:SetScript("OnMouseUp", function(sel, button)
-            if button == "LeftButton" and TrainerSpells:TryInsertSpellLink(entry.spellID) then return true end
+            if button == "LeftButton" and (TrainerSpells:TryInsertChatLink(entry.itemLink) or TrainerSpells:TryInsertSpellLink(entry.spellID)) then return true end
             if button == "LeftButton" and entry.questStart and entry.questStart.uiMapID then
                 TrainerSpells:SetMapWaypoint(entry.questStart)
-            elseif button == "RightButton" then
+            elseif button == "RightButton" and not entry.levelText then
                 TrainerSpells:ShowIgnoreMenu(sel, entry)
             end
         end)

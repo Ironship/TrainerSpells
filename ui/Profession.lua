@@ -427,9 +427,80 @@ TrainerSpells.TrainerLocations.AddResolveListener(function()
     if professionFrame:IsVisible() and professionViewMode == PROFESSION_VIEW_TRAINERS then TrainerSpells_ProfessionRefresh() end
 end)
 
+professionPicker.firstAidUnlocks = {
+    [150] = {
+        maxRank = 225, skill = 125, itemID = 16084,
+        Alliance = {npcName = "Deneb Walker", uiMapID = 1417, x = 27, y = 58.8},
+        Horde = {npcName = "Balai Lok'Wein", uiMapID = 1445, x = 36.4, y = 30.4},
+    },
+    [225] = {
+        maxRank = 300, skill = 225, level = 35,
+        Alliance = {questID = 6624, npcName = "Doctor Gustaf VanHowzen", uiMapID = 1445, x = 67.6, y = 48.8},
+        Horde = {questID = 6622, npcName = "Doctor Gregory Victor", uiMapID = 1417, x = 73.4, y = 36.8},
+    },
+}
+
+function professionPicker.HasFirstAidBook()
+    local getItemCount = (C_Item and C_Item.GetItemCount) or GetItemCount
+    return getItemCount and (getItemCount(professionPicker.firstAidUnlocks[150].itemID) or 0) > 0
+end
+
+function professionPicker.AddFirstAidUnlock(items, searchText)
+    if not TrainerSpells.Pricing.IsForever() then return end
+    local info = professionPicker.GetInfo("First Aid")
+    local unlock = professionPicker.firstAidUnlocks[info.maxRank]
+    if not unlock then return end
+    local faction = TrainerSpells:GetPlayerFaction()
+    local location = faction and unlock[faction]
+    local name, itemLink, icon, status, details
+    local requirements = TrainerSpells:Trans("LID_SKILL") .. " " .. unlock.skill
+    local ready = info.rank >= unlock.skill and (not unlock.level or UnitLevel("player") >= unlock.level)
+    if unlock.itemID then
+        local getItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+        if getItemInfo then name, itemLink = getItemInfo(unlock.itemID) end
+        name = name or TrainerSpells:Trans("LID_PROF_UNLOCK_BOOK")
+        icon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(unlock.itemID)
+        if professionPicker.HasFirstAidBook() then status = TrainerSpells:Trans("LID_PROF_UNLOCK_IN_BAGS") end
+        local heavySilk = TrainerSpells:GetSpellInfo(7929)
+        local mageweave = TrainerSpells:GetSpellInfo(10840)
+        if location and heavySilk and mageweave then
+            details = TrainerSpells:Trans("LID_PROF_UNLOCK_SAME_VENDOR"):format(heavySilk, mageweave)
+        end
+    else
+        local title = location and C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(location.questID)
+        name = title and title ~= "" and title or TrainerSpells:Trans("LID_PROF_UNLOCK_TRIAGE")
+        icon = "Interface\\GossipFrame\\AvailableQuestIcon"
+        requirements = requirements .. " · " .. TrainerSpells:Trans("LID_LVL") .. " " .. unlock.level
+        if location then
+            location = {questID = location.questID, questName = name, npcName = location.npcName, uiMapID = location.uiMapID, x = location.x, y = location.y}
+        end
+    end
+
+    local header = TrainerSpells:Trans("LID_PROF_UNLOCK_NEXT"):format(unlock.maxRank)
+    local search = table.concat({header, name, location and location.npcName or ""}, " "):lower()
+    if searchText ~= "" and not search:find(searchText, 1, true) then return end
+    TrainerSpells:AddHeaderItem(items, header, "|cffffd100")
+    local lines = {requirements}
+    if location then
+        local zone = C_Map and C_Map.GetAreaInfo and C_Map.GetAreaInfo(location.uiMapID)
+        table.insert(lines, zone and (location.npcName .. " · " .. zone) or location.npcName)
+    end
+    if status then table.insert(lines, status) end
+    if details then table.insert(lines, details) end
+    if ready then requirements = "|cff30d030" .. (status or requirements) .. "|r" end
+    TrainerSpells:AddEntryItems(items, {{
+        name = name, icon = icon or 134943, itemID = unlock.itemID, itemLink = itemLink,
+        levelText = requirements, details = table.concat(lines, "\n"),
+        sourceLocations = location and {location} or nil,
+    }}, "|cffffffff")
+end
+
 function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, professionKey, skillLineName, currentSkill)
     searchText = (searchText or ""):lower()
     local items = {}
+    if professionKey == "First Aid" and viewMode ~= PROFESSION_VIEW_RECIPES then
+        professionPicker.AddFirstAidUnlock(items, searchText)
+    end
     if viewMode == PROFESSION_VIEW_RECIPES then
         local data = professionKey and TrainerSpells_RecipeData and TrainerSpells_RecipeData[professionKey]
         if data and next(data) then
@@ -1562,7 +1633,27 @@ for _, event in ipairs({"TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_L
     TrainerSpells:RegisterEvent(tradeSkillWatcher, event)
 end
 
-tradeSkillWatcher:SetScript("OnEvent", function(_, event)
+if TrainerSpells.Pricing.IsForever() then
+    for _, event in ipairs({"BAG_UPDATE_DELAYED", "GET_ITEM_INFO_RECEIVED", "SKILL_LINES_CHANGED", "PLAYER_LEVEL_UP"}) do
+        TrainerSpells:RegisterEvent(tradeSkillWatcher, event)
+    end
+end
+
+tradeSkillWatcher:SetScript("OnEvent", function(_, event, itemID, success)
+    if event == "BAG_UPDATE_DELAYED" then
+        local inBags = professionPicker.HasFirstAidBook()
+        if inBags ~= professionPicker.firstAidBookInBags then
+            professionPicker.firstAidBookInBags = inBags
+            TrainerSpells_ProfessionRefresh()
+        end
+        return
+    elseif event == "GET_ITEM_INFO_RECEIVED" then
+        if success and itemID == professionPicker.firstAidUnlocks[150].itemID then TrainerSpells_ProfessionRefresh() end
+        return
+    elseif event == "SKILL_LINES_CHANGED" or event == "PLAYER_LEVEL_UP" then
+        TrainerSpells_ProfessionRefresh()
+        return
+    end
     EnsureTradeSkillHooksInstalled()
     InstallProfessionsFrameIntegration()
     if event == "TRADE_SKILL_SHOW" and professionsFrameHooksInstalled then
