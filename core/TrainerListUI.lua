@@ -298,13 +298,13 @@ local function InstallTrainerSelectionList(trainer)
         nativeLearn:SetAlpha(learnAlpha)
     end)
 
-    local selected, trainerGUID, batch
+    local selected, trainerGUID, batch, pendingPurchase
     local function CanLearn(entry)
         return entry and entry.status == "available" and entry.cost and entry.cost <= GetMoney()
     end
 
     local function UpdateSelection()
-        learn:SetEnabled(not batch and not not CanLearn(selected))
+        learn:SetEnabled(not batch and not pendingPurchase and not not CanLearn(selected))
         scroll:ForEachFrame(function(row)
             row.selectedTex:SetShown(row:GetElementData() == selected)
         end)
@@ -321,6 +321,7 @@ local function InstallTrainerSelectionList(trainer)
         ClassTrainerFrame_InitServiceButton(row, entry)
         row.selectedTex:SetShown(entry == selected)
         row:SetScript("OnClick", function(self)
+            if pendingPurchase then pendingPurchase.advance = false end
             selected = self:GetElementData()
             UpdateSelection()
         end)
@@ -394,23 +395,43 @@ local function InstallTrainerSelectionList(trainer)
         toggle:SetShown(guid ~= nil and debugEnabled)
         toggle:SetChecked(enabled)
         if not guid or not enabled then
-            selected, trainerGUID, batch = nil, nil, nil
+            selected, trainerGUID, batch, pendingPurchase = nil, nil, nil, nil
             overlay:Hide()
             return
         end
-        if guid ~= trainerGUID then selected, batch = nil, nil end
+        if guid ~= trainerGUID then selected, batch, pendingPurchase = nil, nil, nil end
         trainerGUID = guid
         local entries = ReadEntries()
         selected = FindEntry(entries, selected)
+        local nextEntry
+        if pendingPurchase then
+            local purchased = FindEntry(entries, pendingPurchase.entry)
+            if not purchased or purchased.status == "used" then
+                if pendingPurchase.advance then
+                    local nextIndex = purchased and purchased.skillIndex + 1 or pendingPurchase.entry.skillIndex
+                    for _, entry in ipairs(entries) do
+                        if entry.status == "available" then
+                            nextEntry = entry
+                            if entry.skillIndex >= nextIndex then break end
+                        end
+                    end
+                    selected = nextEntry
+                end
+                pendingPurchase = nil
+            end
+        end
         overlay:Show()
         local retain = retainScrollPosition ~= false and ScrollBoxConstants.RetainScrollPosition
         scroll:SetDataProvider(CreateDataProvider(entries), retain)
+        if nextEntry then
+            scroll:ScrollToElementDataByPredicate(function(entry) return entry == nextEntry end, ScrollBoxConstants.AlignNearest)
+        end
         local showTrainAll = TrainerSpells:IsTrainAllEnabled()
         if not showTrainAll then batch = nil end
         UpdateSelection()
         learnAll:SetShown(showTrainAll)
         local plan, totalCost = GetTrainingPlan(entries)
-        learnAll:SetEnabled(showTrainAll and not batch and #plan > 0 and totalCost <= GetMoney())
+        learnAll:SetEnabled(showTrainAll and not batch and not pendingPurchase and #plan > 0 and totalCost <= GetMoney())
     end
 
     toggle:SetScript("OnClick", function(self)
@@ -419,7 +440,7 @@ local function InstallTrainerSelectionList(trainer)
     end)
 
     local function CanTrainAll(guid)
-        return TrainerSpells:IsTrainAllEnabled() and not batch and guid and guid == trainerGUID and overlay:IsVisible() and guid == GetSupportedTrainerGUID()
+        return TrainerSpells:IsTrainAllEnabled() and not batch and not pendingPurchase and guid and guid == trainerGUID and overlay:IsVisible() and guid == GetSupportedTrainerGUID()
     end
 
     local function StartTraining(session)
@@ -497,17 +518,25 @@ local function InstallTrainerSelectionList(trainer)
     end)
 
     learn:SetScript("OnClick", function()
-        if batch or not overlay:IsVisible() or not trainer:IsShown() or not trainerGUID or trainerGUID ~= GetSupportedTrainerGUID() then return end
+        if batch or pendingPurchase or not overlay:IsVisible() or not trainer:IsShown() or not trainerGUID or trainerGUID ~= GetSupportedTrainerGUID() then return end
         local entry = FindEntry(ReadEntries(), selected)
         if CanLearn(entry) then
-            selected = nil
+            local purchase = {entry = entry, advance = true}
+            pendingPurchase = purchase
             learn:Disable()
+            learnAll:Disable()
+            C_Timer.After(3, function()
+                if pendingPurchase == purchase then
+                    pendingPurchase = nil
+                    RefreshList()
+                end
+            end)
             BuyTrainerService(entry.skillIndex)
         end
         RefreshList()
     end)
     trainer:HookScript("OnHide", function()
-        selected, trainerGUID, batch = nil, nil, nil
+        selected, trainerGUID, batch, pendingPurchase = nil, nil, nil, nil
         learn:Disable()
     end)
     hooksecurefunc("ClassTrainerFrame_Update", RefreshList)
