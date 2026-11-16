@@ -447,6 +447,12 @@ professionPicker.rankUnlocks = {
             Horde = {npcName = "Wulan", uiMapID = 1443, x = 26.2, y = 69.8},
         },
     },
+    Fishing = {
+        [150] = {
+            maxRank = 225, skill = 125, level = 20, itemID = 16083,
+            neutral = {npcName = "Old Man Heming", uiMapID = 1434, x = 27.4, y = 77},
+        },
+    },
 }
 
 professionPicker.unlockBooksInBags = {}
@@ -468,9 +474,12 @@ function professionPicker.AddRankUnlock(items, searchText, professionKey)
     local unlock = ranks[info.maxRank]
     if not unlock then return end
     local faction = TrainerSpells:GetPlayerFaction()
-    local location = faction and unlock[faction]
+    local location = unlock.neutral or (faction and unlock[faction])
     local name, itemLink, icon, status, details
     local requirements = TrainerSpells:Trans("LID_SKILL") .. " " .. unlock.skill
+    if unlock.level then
+        requirements = requirements .. " · " .. TrainerSpells:Trans("LID_LVL") .. " " .. unlock.level
+    end
     local ready = info.rank >= unlock.skill and (not unlock.level or UnitLevel("player") >= unlock.level)
     if unlock.itemID then
         local getItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
@@ -487,7 +496,6 @@ function professionPicker.AddRankUnlock(items, searchText, professionKey)
         local title = location and C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(location.questID)
         name = title and title ~= "" and title or TrainerSpells:Trans("LID_PROF_UNLOCK_TRIAGE")
         icon = "Interface\\GossipFrame\\AvailableQuestIcon"
-        requirements = requirements .. " · " .. TrainerSpells:Trans("LID_LVL") .. " " .. unlock.level
         if location then
             location = {questID = location.questID, questName = name, npcName = location.npcName, uiMapID = location.uiMapID, x = location.x, y = location.y}
         end
