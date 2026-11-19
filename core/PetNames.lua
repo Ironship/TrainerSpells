@@ -15,6 +15,17 @@ local function CommonAffixLength(a, b, fromEnd)
         if a:sub(posA, posA) ~= b:sub(posB, posB) then break end
         len = len + 1
     end
+
+    local function IsContinuationByte(value)
+        return value and value >= 128 and value <= 191
+    end
+
+    while len > 0 do
+        local posA = fromEnd and (#a - len + 1) or (len + 1)
+        local posB = fromEnd and (#b - len + 1) or (len + 1)
+        if not IsContinuationByte(a:byte(posA)) and not IsContinuationByte(b:byte(posB)) then break end
+        len = len - 1
+    end
     return len
 end
 
@@ -44,7 +55,7 @@ local function StripCommonAffixes(names)
     for i, name in pairs(names) do
         local suffixStart = math.max(prefixLen, #name - suffixLen)
         local stripped = name:sub(prefixLen + 1, suffixStart):match("^%s*(.-)%s*$")
-        result[i] = stripped:sub(1, 1):upper() .. stripped:sub(2)
+        result[i] = stripped:gsub("^[a-z]", string.upper)
     end
     return result
 end
