@@ -185,7 +185,24 @@ function Beasts.SpellFromLearnText(text)
         local ok, subtext = pcall(getSubtext or error, id)
         if ok and Beasts.IsUsable(subtext) then rankText = subtext end
     end
-    return Beasts.RankByName(name, rankText)
+    return Beasts.RankByName(name, rankText) or Beasts.RankFromPetBook(name)
+end
+
+function Beasts.RankFromPetBook(name)
+    local book = C_SpellBook
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Pet
+    if not book or not book.HasPetSpells or not book.GetSpellBookItemInfo or not bank then return nil end
+    local ok, count = pcall(book.HasPetSpells)
+    if not ok or not Beasts.IsUsable(count) then return nil end
+    for index = 1, count or 0 do
+        local okInfo, info = pcall(book.GetSpellBookItemInfo, index, bank)
+        if okInfo and type(info) == "table" and Beasts.IsUsable(info.name) and info.name == name then
+            local id = Beasts.IsUsable(info.spellID) and info.spellID
+            if id and Beasts.rankBySpell[id] then return id end
+            local spell = Beasts.RankByName(name, info.subName)
+            if spell then return spell end
+        end
+    end
 end
 
 function Beasts.OnSystemMessage(message)
@@ -206,14 +223,23 @@ function Beasts.ScanTrainer()
     local source = isBeastTraining and "craft" or "trainer"
     local found = {}
     for spell in pairs(Beasts.Store().beastKnown[source] or {}) do found[spell] = true end
-    for index = 1, GetNumTrainerServices() or 0 do
-        local name, rankText, serviceType = TrainerSpells:GetTrainerServiceInfo(index)
-        if serviceType == "used" or (isBeastTraining and (serviceType == "available" or serviceType == "unavailable")) then
-            local spell = Beasts.RankByName(name, rankText) or TrainerSpells:GetSpellIDForService(index, true)
-            if not Beasts.rankBySpell[spell] then spell = nil end
-            if spell then found[spell] = true end
-        end
+    local restoreUsed = GetTrainerServiceTypeFilter and SetTrainerServiceTypeFilter and not GetTrainerServiceTypeFilter("used")
+    if restoreUsed then
+        Beasts.ignoreTrainerUpdateUntil = GetTime() + 2
+        SetTrainerServiceTypeFilter("used", true)
     end
+    local ok, err = pcall(function()
+        for index = 1, GetNumTrainerServices() or 0 do
+            local name, rankText, serviceType = TrainerSpells:GetTrainerServiceInfo(index)
+            if serviceType == "used" or (isBeastTraining and (serviceType == "available" or serviceType == "unavailable")) then
+                local spell = Beasts.RankByName(name, rankText) or TrainerSpells:GetSpellIDForService(index, true)
+                if not Beasts.rankBySpell[spell] then spell = nil end
+                if spell then found[spell] = true end
+            end
+        end
+    end)
+    if restoreUsed then SetTrainerServiceTypeFilter("used", false) end
+    if not ok then error(err) end
     Beasts.SetKnownSource(source, found)
 end
 
@@ -257,6 +283,8 @@ Beasts.eventFrame:SetScript("OnEvent", function(_, event, unit)
         Beasts.RecordSpeed("target", Beasts.UnitBeast("target"))
     elseif event == "UPDATE_MOUSEOVER_UNIT" then
         Beasts.RecordSpeed("mouseover", Beasts.UnitBeast("mouseover"))
+    elseif event == "TRAINER_UPDATE" and Beasts.ignoreTrainerUpdateUntil and GetTime() < Beasts.ignoreTrainerUpdateUntil then
+        return
     elseif event ~= "UNIT_PET" or unit == "player" then
         Beasts.ScheduleScan()
     end
