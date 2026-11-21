@@ -140,8 +140,13 @@ end
 function Beasts.ScanCraft()
     if not GetNumCrafts or not GetCraftInfo then return end
     local beastTraining = TrainerSpells:GetSpellInfo(5149)
-    local getCraftSkillLine = GetCraftSkillLine or GetCraftName or GetCraftDisplaySkillLine
-    if not beastTraining or not getCraftSkillLine or getCraftSkillLine() ~= beastTraining then return end
+    if not beastTraining then return end
+    local craftName = GetCraftDisplaySkillLine and GetCraftDisplaySkillLine() or GetCraftName and GetCraftName()
+    if not craftName and GetCraftSkillLine and (GetNumCrafts() or 0) > 0 then
+        local ok, line = pcall(GetCraftSkillLine, 1)
+        if ok then craftName = line end
+    end
+    if craftName ~= beastTraining then return end
     local found = {}
     for spell in pairs(Beasts.Store().beastKnown.craft or {}) do found[spell] = true end
     for index = 1, GetNumCrafts() or 0 do
