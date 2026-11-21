@@ -16,6 +16,13 @@ local function OtherAddonLoaded()
     return isLoaded and isLoaded("AutoSpellRanks") and true or false
 end
 
+local function CooldownsSecret()
+    local secrets = C_Secrets
+    if not (secrets and secrets.ShouldCooldownsBeSecret) then return false end
+    local ok, hidden = pcall(secrets.ShouldCooldownsBeSecret)
+    return ok and hidden == true
+end
+
 function AutoRanks.Settings()
     local settings = TrainerSpells_Character or {}
     if settings.autoSpellRanks == nil then settings.autoSpellRanks = true end
@@ -24,7 +31,7 @@ function AutoRanks.Settings()
 end
 
 function AutoRanks.IsActive()
-    return AutoRanks.Settings().autoSpellRanks and not AutoRanks.broken and not OtherAddonLoaded()
+    return AutoRanks.Settings().autoSpellRanks and not AutoRanks.broken and not OtherAddonLoaded() and not TrainerSpells.IsGamepadUIEnabled()
 end
 
 function AutoRanks.SpellName(spellID)
@@ -100,6 +107,10 @@ function AutoRanks.Scan()
         AutoRanks.pending = true
         return
     end
+    if CooldownsSecret() then
+        AutoRanks.Schedule(2)
+        return
+    end
     if GetCursorInfo() then
         AutoRanks.Schedule(2)
         return
@@ -154,7 +165,13 @@ for _, event in ipairs({"PLAYER_LOGIN", "SPELLS_CHANGED", "LEARNED_SPELL_IN_SKIL
 end
 events:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
-        if AutoRanks.Settings().autoSpellRanks and OtherAddonLoaded() then TrainerSpells:MSG(TrainerSpells:Trans("LID_AUTORANKS_OTHERADDON")) end
+        if AutoRanks.Settings().autoSpellRanks then
+            if OtherAddonLoaded() then
+                TrainerSpells:MSG(TrainerSpells:Trans("LID_AUTORANKS_OTHERADDON"))
+            elseif TrainerSpells.IsGamepadUIEnabled() then
+                TrainerSpells:MSG(TrainerSpells:Trans("LID_AUTORANKS_GAMEPAD"))
+            end
+        end
         AutoRanks.Schedule(3)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if AutoRanks.pending then

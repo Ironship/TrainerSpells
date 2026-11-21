@@ -12,6 +12,10 @@ function TrainerSpells:HasClassTrainers()
     return INTERFACE_VERSION < FIRST_VERSION_WITHOUT_CLASS_TRAINERS
 end
 
+function TrainerSpells.IsGamepadUIEnabled()
+    return InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+end
+
 TrainerSpells_Data = TrainerSpells_Data or {}
 TrainerSpells_Ignored = TrainerSpells_Ignored or {}
 TrainerSpells_IgnoredNames = TrainerSpells_IgnoredNames or {}

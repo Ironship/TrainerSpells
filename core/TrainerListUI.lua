@@ -389,6 +389,12 @@ local function InstallTrainerSelectionList(trainer)
 
     local function RefreshList(retainScrollPosition)
         if not trainer:IsShown() then return end
+        if TrainerSpells.IsGamepadUIEnabled() then
+            selected, trainerGUID, batch, pendingPurchase = nil, nil, nil, nil
+            toggle:Hide()
+            overlay:Hide()
+            return
+        end
         local guid = GetSupportedTrainerGUID()
         local debugEnabled = TrainerSpells.DebugTrainerEnabled
         local enabled = not debugEnabled or not TrainerSpells_Character.useBlizzardTrainerList
