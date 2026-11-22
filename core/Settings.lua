@@ -465,9 +465,13 @@ function TrainerSpells:InitializeSettings()
         icon = TrainerSpells:GetAddonIcon(),
         dbtab = TrainerSpells_Character,
         dbkey = "showMinimapButton",
-        vTT = {{"TrainerSpells"}, {self:Trans("LID_SETTINGS_OPEN")}},
+        vTT = {{"TrainerSpells"}, {self:Trans("LID_SETTINGS_OPEN")}, {self:Trans("LID_SHIFTRIGHTCLICK"), self:Trans("LID_HIDEMINIMAPBUTTON")}},
         funcL = function() self:ToggleSettings() end,
-        funcR = function() self:ToggleSettings() end
+        funcR = function() self:ToggleSettings() end,
+        funcSR = function()
+            TrainerSpells_Character.showMinimapButton = false
+            self:HideMMBtn("TrainerSpells")
+        end
     })
 
     self:AddSlash("ts", function() self:ToggleSettings() end)
