@@ -193,6 +193,7 @@ function TrainerSpells:MergeBuiltinData()
                             bucket[name] = {
                                 spellID = spellID,
                                 icon = data.icon,
+                                recipeItemID = data.recipeItemID,
                                 requires = data.requires,
                                 faction = data.faction,
                                 source = data.source,
@@ -201,6 +202,7 @@ function TrainerSpells:MergeBuiltinData()
                         else
                             if bucket[name].spellID == nil then bucket[name].spellID = spellID end
                             if data.icon and bucket[name].icon == nil then bucket[name].icon = data.icon end
+                            if data.recipeItemID and bucket[name].recipeItemID == nil then bucket[name].recipeItemID = data.recipeItemID end
                             if data.requires and bucket[name].requires == nil then bucket[name].requires = data.requires end
                             if data.faction and bucket[name].faction == nil then bucket[name].faction = data.faction end
                             if data.source and bucket[name].source == nil then bucket[name].source = data.source end

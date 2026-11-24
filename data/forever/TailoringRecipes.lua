@@ -43,6 +43,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 44.6,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2394,
                         npcName = "Mallen Swain",
                         uiMapID = 1424,
@@ -192,6 +193,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 36.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 6576,
                         npcName = "Brienna Starglow",
                         uiMapID = 1444,
@@ -370,6 +372,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Tharynn Bouden (Elwynn Forest), Borya (Orgrimmar), Wrahk (The Barrens), Constance Brisboise (Tirisfal Glades), Valdaron (Darkshore)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 66,
                         npcName = "Tharynn Bouden",
                         uiMapID = 1429,
@@ -474,6 +477,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Gina MacGregor (Westfall), Mahu (Thunder Bluff), Andrew Hilbert (Silverpine Forest), Valdaron (Darkshore) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 843,
                         npcName = "Gina MacGregor",
                         uiMapID = 1436,
@@ -703,6 +707,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 44.6,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2394,
                         npcName = "Mallen Swain",
                         uiMapID = 1424,
@@ -852,6 +857,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 36.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 6576,
                         npcName = "Brienna Starglow",
                         uiMapID = 1444,
@@ -1028,6 +1034,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Gina MacGregor (Westfall), Alexandra Bolero (Stormwind City), Mallen Swain (Hillsbrad Foothills), Borya (Orgrimmar), Yonada (The Barrens)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 843,
                         npcName = "Gina MacGregor",
                         uiMapID = 1436,
@@ -1045,6 +1052,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 81.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2394,
                         npcName = "Mallen Swain",
                         uiMapID = 1424,
@@ -1379,6 +1387,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Amy Davenport (Redridge Mountains), Jennabink Powerseam (Wetlands), Rann Flamespinner (Loch Modan), Mahu (Thunder Bluff), Borya (Orgrimmar), Wrahk (The Barrens), Zixil (Hillsbrad Foothills), Kiknikle (The Barrens), Valdaron (Darkshore), Millie Gregorian (Undercity), Yonada (The Barrens) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 777,
                         npcName = "Amy Davenport",
                         uiMapID = 1433,
@@ -1901,6 +1910,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Mallen Swain (Hillsbrad Foothills), Sheri Zipstitch (Duskwood), Super-Seller 680 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 2394,
                         npcName = "Mallen Swain",
                         uiMapID = 1424,
@@ -2213,6 +2223,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 36.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 6576,
                         npcName = "Brienna Starglow",
                         uiMapID = 1444,
@@ -2429,6 +2440,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Micha Yance (Hillsbrad Foothills), Ghok'kah (Dustwallow Marsh)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2381,
                         npcName = "Micha Yance",
                         uiMapID = 1424,
@@ -2823,6 +2835,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 50.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -3949,6 +3962,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -3957,6 +3971,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
@@ -4119,6 +4134,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -4127,6 +4143,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,

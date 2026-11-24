@@ -171,6 +171,21 @@ local function GetRowLocationButton(rowFrame, index)
     return rowFrame.locationButtons[index]
 end
 
+local function GetRowRecipeItemButton(rowFrame)
+    local button = rowFrame.recipeItemButton
+    if not button then
+        button = TrainerSpells.CreateDetachedFrame("Button", rowFrame)
+        button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        button.icon = button:CreateTexture(nil, "ARTWORK")
+        button.icon:SetAllPoints()
+        button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        button.tsRow = rowFrame
+        button:Hide()
+        rowFrame.recipeItemButton = button
+    end
+    return button
+end
+
 local function UpdateCollapseButton(rowFrame, elementData, anchor)
     if not elementData.groupKey then
         if rowFrame.collapseButton then rowFrame.collapseButton:Hide() end
@@ -684,7 +699,22 @@ function TrainerSpells:ApplyRowInteraction(rowFrame)
             button:Hide()
         end
 
-        if rowFrame.icon:IsShown() then
+        local recipeButton = rowFrame.recipeItemButton
+        if recipeButton and recipeButton:IsShown() then
+            local point, relativeTo, relativePoint, x, y = recipeButton:GetPoint(1)
+            if point then recipeButton:SetPoint(point, relativeTo, relativePoint, x + TrainerSpells.GamepadRowInset, y) end
+            local standIn = rowFrame.tsStandIns[recipeButton]
+            if not standIn then
+                standIn = rowFrame:CreateTexture(nil, "ARTWORK")
+                standIn:SetAllPoints(recipeButton)
+                rowFrame.tsStandIns[recipeButton] = standIn
+            end
+
+            standIn:SetTexture(recipeButton.icon:GetTexture())
+            standIn:SetTexCoord(recipeButton.icon:GetTexCoord())
+            standIn:Show()
+            recipeButton:Hide()
+        elseif rowFrame.icon:IsShown() then
             local point, relativeTo, relativePoint, x, y = rowFrame.icon:GetPoint(1)
             if point then rowFrame.icon:SetPoint(point, relativeTo, relativePoint, x + TrainerSpells.GamepadRowInset, y) end
         end
@@ -766,6 +796,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         GetRowHitButton(rowFrame)
         GetRowCollapseButton(rowFrame)
         GetRowLocationButton(rowFrame, 3)
+        GetRowRecipeItemButton(rowFrame)
         local icon = rowFrame:CreateTexture(nil, "ARTWORK")
         icon:SetPoint("LEFT", rowFrame, "LEFT", 4, 0)
         icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -807,6 +838,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
     rowFrame:SetScript("OnLeave", nil)
     rowFrame:SetScript("OnMouseUp", nil)
     if rowFrame.collapseButton then rowFrame.collapseButton:Hide() end
+    if rowFrame.recipeItemButton then rowFrame.recipeItemButton:Hide() end
     if rowFrame.locationButtons then
         for _, button in ipairs(rowFrame.locationButtons) do
             button:Hide()
@@ -1014,9 +1046,37 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         rowFrame:SetScript("OnLeave", GameTooltip_Hide)
     else
         local entry = elementData.entry
-        if elementData.rowDepth and elementData.rowDepth > 0 then
+        local leftInset = 4 + ((elementData.rowDepth or 0) * 16)
+        if entry.recipeItemID then
+            local bookButton = GetRowRecipeItemButton(rowFrame)
+            local bookIcon = (C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(entry.recipeItemID)) or 133735
+            bookButton:SetFrameLevel(rowFrame:GetFrameLevel() + 1)
+            bookButton:ClearAllPoints()
+            bookButton:SetPoint("LEFT", rowFrame, "LEFT", leftInset, 0)
+            bookButton:SetSize(iconSize, iconSize)
+            bookButton.icon:SetTexture(bookIcon)
+            bookButton:SetScript("OnEnter", function(sel)
+                GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
+                GameTooltip:SetItemByID(entry.recipeItemID)
+                GameTooltip:Show()
+            end)
+            bookButton:SetScript("OnLeave", GameTooltip_Hide)
+            bookButton:SetScript("OnClick", function(sel, mouseButton)
+                if mouseButton == "LeftButton" then
+                    local getItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+                    local itemLink = getItemInfo and select(2, getItemInfo(entry.recipeItemID))
+                    if TrainerSpells:TryInsertChatLink(itemLink) then return end
+                elseif mouseButton == "RightButton" and not entry.levelText then
+                    TrainerSpells:ShowIgnoreMenu(sel, entry)
+                end
+            end)
+            bookButton:Show()
             icon:ClearAllPoints()
-            icon:SetPoint("LEFT", rowFrame, "LEFT", 4 + (elementData.rowDepth * 16), 0)
+            icon:SetPoint("LEFT", bookButton, "RIGHT", 3, 0)
+            leftInset = leftInset + iconSize + 3
+        elseif elementData.rowDepth and elementData.rowDepth > 0 then
+            icon:ClearAllPoints()
+            icon:SetPoint("LEFT", rowFrame, "LEFT", leftInset, 0)
         end
         icon:SetTexture(entry.icon)
         local rankSubtext = GetLocalizedRankText(entry.spellID, entry.rankNum, entry.hasRealRank)
@@ -1111,7 +1171,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         end
 
         if sourceFS:IsShown() then rowFrame.levelShort = nil end
-        rowFrame.levelNameLeft = 4 + (elementData.rowDepth or 0) * 16 + iconSize + 6
+        rowFrame.levelNameLeft = leftInset + iconSize + 6
         FitRowLevel(rowFrame)
 
         rowFrame:EnableMouse(true)

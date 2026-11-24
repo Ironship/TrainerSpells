@@ -70,6 +70,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 50.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -165,6 +166,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 50.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -280,6 +282,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 44.2,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -300,6 +303,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Dalria (Ashenvale), Kulwia (Stonetalon Mountains) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 3954,
                         npcName = "Dalria",
                         uiMapID = 1440,
@@ -446,6 +450,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Dalria (Ashenvale), Kulwia (Stonetalon Mountains)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 3954,
                         npcName = "Dalria",
                         uiMapID = 1440,
@@ -730,6 +735,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 50.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -762,6 +768,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Micha Yance (Hillsbrad Foothills), Keena (Arathi Highlands)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2381,
                         npcName = "Micha Yance",
                         uiMapID = 1424,
@@ -880,6 +887,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 50.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 5758,
                         npcName = "Leo Sarn",
                         uiMapID = 1421,
@@ -1592,6 +1600,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -1600,6 +1609,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
@@ -1710,6 +1720,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -1718,6 +1729,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,

@@ -10,9 +10,11 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
         [180] = {
             [7929] = {
                 icon = "Interface\\Icons\\inv_misc_bandage_02",
+                recipeItemID = 16112,
                 source = "Sold by Deneb Walker (Arathi Highlands), Balai Lok'Wein (Dustwallow Marsh)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2805,
                         npcName = "Deneb Walker",
                         uiMapID = 1417,
@@ -35,9 +37,11 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
         [210] = {
             [10840] = {
                 icon = "Interface\\Icons\\inv_misc_bandage_19",
+                recipeItemID = 16113,
                 source = "Sold by Deneb Walker (Arathi Highlands), Balai Lok'Wein (Dustwallow Marsh)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2805,
                         npcName = "Deneb Walker",
                         uiMapID = 1417,
@@ -79,6 +83,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -87,6 +92,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,

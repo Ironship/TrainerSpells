@@ -275,6 +275,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 19.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 3490,
                         npcName = "Hula'mahi",
                         uiMapID = 1413,
@@ -487,6 +488,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Nandar Branson (Hillsbrad Foothills), Jeeda (Stonetalon Mountains)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2380,
                         npcName = "Nandar Branson",
                         uiMapID = 1424,
@@ -640,6 +642,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Drovnar Strongbrew (Arathi Highlands), Glyx Brewright (Stranglethorn Vale)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2812,
                         npcName = "Drovnar Strongbrew",
                         uiMapID = 1417,
@@ -687,6 +690,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 44,
                     },
                     {
+                        faction = "Horde",
                         npcID = 8158,
                         npcName = "Bronk",
                         uiMapID = 1444,
@@ -956,6 +960,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 44,
                     },
                     {
+                        faction = "Horde",
                         npcID = 8158,
                         npcName = "Bronk",
                         uiMapID = 1444,
@@ -1184,6 +1189,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -1192,6 +1198,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,

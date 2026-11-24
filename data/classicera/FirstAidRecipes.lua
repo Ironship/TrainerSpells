@@ -4,12 +4,14 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
         [180] = {
             [7929] = {
                 icon = "Interface\\Icons\\inv_misc_bandage_02",
+                recipeItemID = 16112,
                 source = "Manual: Heavy Silk Bandage — sold by Deneb Walker (Stromgarde Keep, Arathi Highlands) / Balai Lok'Wein (Brackenwall Village, Dustwallow Marsh); not taught by trainers",
             },
         },
         [210] = {
             [10840] = {
                 icon = "Interface\\Icons\\inv_misc_bandage_19",
+                recipeItemID = 16113,
                 source = "Manual: Mageweave Bandage — sold by Deneb Walker (Stromgarde Keep, Arathi Highlands) / Balai Lok'Wein (Brackenwall Village, Dustwallow Marsh); not taught by trainers",
             },
         },

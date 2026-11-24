@@ -606,10 +606,11 @@ function TrainerSpells:CreateRecipeControls(parent, onChange)
     return controls
 end
 
-local function CloneRecipeEntryWithLocations(entry, locations)
+local function CloneRecipeEntryWithLocations(entry, locations, source)
     local copy = {}
     for k, v in pairs(entry) do copy[k] = v end
     copy.sourceLocations = locations
+    if source ~= nil then copy.source = source end
     return copy
 end
 
@@ -627,12 +628,22 @@ local function GetRecipeSourceTargets(entry)
                 if not seenVendors[vendorID] then
                     seenVendors[vendorID] = true
                     local label = loc.npcName and loc.zoneName and (loc.npcName .. " (" .. loc.zoneName .. ")") or loc.npcName or loc.zoneName or TrainerSpells:Trans("LID_SOURCE")
-                    table.insert(targets, {key = "vendor_" .. vendorID, label = label, bucket = 1, entry = CloneRecipeEntryWithLocations(entry, {loc})})
+                    local vendorSource = (loc.npcName or loc.zoneName) and ("Sold by " .. label) or entry.source
+                    table.insert(targets, {key = "vendor_" .. vendorID, label = label, bucket = 1, entry = CloneRecipeEntryWithLocations(entry, {loc}, vendorSource)})
                 end
             end
         end
         if #questLocs > 0 then
-            table.insert(targets, {key = "quest", label = TrainerSpells:Trans("LID_QUEST_SPELL"), bucket = 2, entry = CloneRecipeEntryWithLocations(entry, questLocs)})
+            local questNames, seenQuests = {}, {}
+            for _, loc in ipairs(questLocs) do
+                local qName = loc.questName or tostring(loc.questID)
+                if not seenQuests[qName] then
+                    seenQuests[qName] = true
+                    table.insert(questNames, qName)
+                end
+            end
+            local questSource = #questNames > 0 and ("Quest reward: " .. table.concat(questNames, ", ")) or entry.source
+            table.insert(targets, {key = "quest", label = TrainerSpells:Trans("LID_QUEST_SPELL"), bucket = 2, entry = CloneRecipeEntryWithLocations(entry, questLocs, questSource)})
         end
     end
     if #targets == 0 then

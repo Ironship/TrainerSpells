@@ -7,6 +7,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Tharynn Bouden (Elwynn Forest), Khara Deepwater (Loch Modan), Sewa Mistrunner (Thunder Bluff), Martine Tramblay (Tirisfal Glades), Nyoma (Teldrassil), Lizbeth Cromwell (Undercity), Catherine Leland (Stormwind City), Harn Longcast (Mulgore), Gretta Ganter (Dun Morogh), Nyalah Brightfire (Zephras Isle)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 66,
                         npcName = "Tharynn Bouden",
                         uiMapID = 1429,
@@ -33,6 +34,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 48,
                     },
                     {
+                        faction = "Horde",
                         npcID = 3550,
                         npcName = "Martine Tramblay",
                         uiMapID = 1420,
@@ -59,6 +61,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 30.8,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 5494,
                         npcName = "Catherine Leland",
                         uiMapID = 1453,
@@ -99,6 +102,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Martine Tramblay (Tirisfal Glades), Kriggon Talsone (Westfall), Tansy Puddlefizz (Ironforge), Zansoa (Durotar), Nessa Shadowsong (Teldrassil), Nyalah Brightfire (Zephras Isle)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 3550,
                         npcName = "Martine Tramblay",
                         uiMapID = 1420,
@@ -107,6 +111,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 59.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4305,
                         npcName = "Kriggon Talsone",
                         uiMapID = 1436,
@@ -133,6 +138,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 73.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10118,
                         npcName = "Nessa Shadowsong",
                         uiMapID = 1438,
@@ -498,6 +504,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Laird (Darkshore)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 4200,
                         npcName = "Laird",
                         uiMapID = 1439,
@@ -512,6 +519,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Tari'qa (The Barrens) / Quest reward: Easy Strider Living",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 3482,
                         npcName = "Tari'qa",
                         uiMapID = 1413,
@@ -537,6 +545,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Tharynn Bouden (Elwynn Forest), Khara Deepwater (Loch Modan), Naal Mistrunner (Thunder Bluff), Nyoma (Teldrassil), Lizbeth Cromwell (Undercity), Tansy Puddlefizz (Ironforge), Killian Sanatha (Silverpine Forest), Harn Longcast (Mulgore), Nyalah Brightfire (Zephras Isle)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 66,
                         npcName = "Tharynn Bouden",
                         uiMapID = 1429,
@@ -637,6 +646,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Stuart Fleming (Wetlands), Shankys (Orgrimmar), Kilxx (The Barrens), Kriggon Talsone (Westfall), Heldan Galesong (Darkshore), Ronald Burch (Undercity), Catherine Leland (Stormwind City), Killian Sanatha (Silverpine Forest), Zansoa (Durotar), Nessa Shadowsong (Teldrassil), Gritta Chumwater (Riverglades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 3178,
                         npcName = "Stuart Fleming",
                         uiMapID = 1437,
@@ -662,6 +672,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 38.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4305,
                         npcName = "Kriggon Talsone",
                         uiMapID = 1436,
@@ -670,6 +681,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 90,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4307,
                         npcName = "Heldan Galesong",
                         uiMapID = 1439,
@@ -687,6 +699,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 43.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 5494,
                         npcName = "Catherine Leland",
                         uiMapID = 1453,
@@ -713,6 +726,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 73.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10118,
                         npcName = "Nessa Shadowsong",
                         uiMapID = 1438,
@@ -859,6 +873,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Micha Yance (Hillsbrad Foothills), Derak Nightfall (Hillsbrad Foothills), Kelsey Yance (Stranglethorn Vale), Naal Mistrunner (Thunder Bluff), Gloria Femmel (Redridge Mountains), Xen'to (Orgrimmar), Fyldan (Darnassus), Nyoma (Teldrassil), Ronald Burch (Undercity), Emrul Riknussun (Ironforge), Erika Tate (Stormwind City), Tarban Hearthgrain (The Barrens), Wulan (Desolace), Otho Moji'ko (The Hinterlands), Carrie Hearthfire (Eastern Plaguelands), Reagent Bot (Westfall), Reagent Bot (Loch Modan), Reagent Bot (Elwynn Forest), Aza'bek (The Barrens), Zerril Softbreeze (Zephras Isle), Derek Odds (Alterac Mountains), Repair Bot (Westfall), Repair Bot (Durotar), Repair Bot (Elwynn Forest), Kalsey Sanden (Redridge Mountains), Fimbo Greasemitz (Riverglades), Paige (Alterac Mountains), Qujo (The Hinterlands), Miranda Turner (Riverglades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2381,
                         npcName = "Micha Yance",
                         uiMapID = 1424,
@@ -867,6 +882,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 55,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2397,
                         npcName = "Derak Nightfall",
                         uiMapID = 1424,
@@ -955,6 +971,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 52.9,
                     },
                     {
+                        faction = "Horde",
                         npcID = 8307,
                         npcName = "Tarban Hearthgrain",
                         uiMapID = 1413,
@@ -1090,6 +1107,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 74.6,
                     },
                     {
+                        faction = "Horde",
                         npcID = 270780,
                         npcName = "Qujo",
                         uiMapID = 1425,
@@ -1179,6 +1197,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Kriggon Talsone (Westfall), Heldan Galesong (Darkshore)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 4305,
                         npcName = "Kriggon Talsone",
                         uiMapID = 1436,
@@ -1187,6 +1206,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 90,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4307,
                         npcName = "Heldan Galesong",
                         uiMapID = 1439,
@@ -1255,6 +1275,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Tari'qa (The Barrens)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 3482,
                         npcName = "Tari'qa",
                         uiMapID = 1413,
@@ -1269,6 +1290,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Lindea Rabonne (Hillsbrad Foothills), Derak Nightfall (Hillsbrad Foothills), Naal Mistrunner (Thunder Bluff), Sewa Mistrunner (Thunder Bluff), Kilxx (The Barrens), Ronald Burch (Undercity), Catherine Leland (Stormwind City), Gritta Chumwater (Riverglades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2383,
                         npcName = "Lindea Rabonne",
                         uiMapID = 1424,
@@ -1277,6 +1299,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 61,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2397,
                         npcName = "Derak Nightfall",
                         uiMapID = 1424,
@@ -1320,6 +1343,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 43.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 5494,
                         npcName = "Catherine Leland",
                         uiMapID = 1453,
@@ -1409,6 +1433,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Ulthaan (Ashenvale), Super-Seller 680 (Desolace) / Quest reward: The Rescue",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 3960,
                         npcName = "Ulthaan",
                         uiMapID = 1440,
@@ -1442,6 +1467,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Ulthaan (Ashenvale), Vendor-Tron 1000 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 3960,
                         npcName = "Ulthaan",
                         uiMapID = 1440,
@@ -1588,6 +1614,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 51.2,
                     },
                     {
+                        faction = "Horde",
                         npcID = 1148,
                         npcName = "Nerrist",
                         uiMapID = 1434,
@@ -1689,6 +1716,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Lindea Rabonne (Hillsbrad Foothills), Kelsey Yance (Stranglethorn Vale), Stuart Fleming (Wetlands), Shankys (Orgrimmar), Heldan Galesong (Darkshore), Lizbeth Cromwell (Undercity), Tansy Puddlefizz (Ironforge), Wulan (Desolace), Wik'Tar (Ashenvale)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2383,
                         npcName = "Lindea Rabonne",
                         uiMapID = 1424,
@@ -1705,6 +1733,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 74.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 3178,
                         npcName = "Stuart Fleming",
                         uiMapID = 1437,
@@ -1722,6 +1751,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 29,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4307,
                         npcName = "Heldan Galesong",
                         uiMapID = 1439,
@@ -1757,6 +1787,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 69.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 12962,
                         npcName = "Wik'Tar",
                         uiMapID = 1440,
@@ -1771,6 +1802,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Corporal Bluth (Stranglethorn Vale), Nerrist (Stranglethorn Vale), Hammon Karwn (Arathi Highlands), Keena (Arathi Highlands), Ogg'marr (Dustwallow Marsh), Helenia Olden (Dustwallow Marsh), Vendor-Tron 1000 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 734,
                         npcName = "Corporal Bluth",
                         uiMapID = 1434,
@@ -1779,6 +1811,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 3,
                     },
                     {
+                        faction = "Horde",
                         npcID = 1148,
                         npcName = "Nerrist",
                         uiMapID = 1434,
@@ -1787,6 +1820,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 29.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 2810,
                         npcName = "Hammon Karwn",
                         uiMapID = 1417,
@@ -1836,6 +1870,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Vivianna (Feralas), Sheendra Tallgrass (Feralas), Super-Seller 680 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7947,
                         npcName = "Vivianna",
                         uiMapID = 1444,
@@ -1867,6 +1902,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Corporal Bluth (Stranglethorn Vale), Nerrist (Stranglethorn Vale), Vendor-Tron 1000 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 734,
                         npcName = "Corporal Bluth",
                         uiMapID = 1434,
@@ -1875,6 +1911,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 3,
                     },
                     {
+                        faction = "Horde",
                         npcID = 1148,
                         npcName = "Nerrist",
                         uiMapID = 1434,
@@ -1970,6 +2007,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Lindea Rabonne (Hillsbrad Foothills), Kelsey Yance (Stranglethorn Vale), Stuart Fleming (Wetlands), Shankys (Orgrimmar), Heldan Galesong (Darkshore), Lizbeth Cromwell (Undercity), Tansy Puddlefizz (Ironforge), Wulan (Desolace), Wik'Tar (Ashenvale)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2383,
                         npcName = "Lindea Rabonne",
                         uiMapID = 1424,
@@ -1986,6 +2024,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 74.4,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 3178,
                         npcName = "Stuart Fleming",
                         uiMapID = 1437,
@@ -2003,6 +2042,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 29,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4307,
                         npcName = "Heldan Galesong",
                         uiMapID = 1439,
@@ -2038,6 +2078,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 69.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 12962,
                         npcName = "Wik'Tar",
                         uiMapID = 1440,
@@ -2052,6 +2093,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Micha Yance (Hillsbrad Foothills), Derak Nightfall (Hillsbrad Foothills), Kelsey Yance (Stranglethorn Vale), Naal Mistrunner (Thunder Bluff), Gloria Femmel (Redridge Mountains), Xen'to (Orgrimmar), Fyldan (Darnassus), Nyoma (Teldrassil), Ronald Burch (Undercity), Emrul Riknussun (Ironforge), Erika Tate (Stormwind City), Tarban Hearthgrain (The Barrens), Wulan (Desolace), Otho Moji'ko (The Hinterlands), Carrie Hearthfire (Eastern Plaguelands), Reagent Bot (Westfall), Reagent Bot (Loch Modan), Reagent Bot (Elwynn Forest), Aza'bek (The Barrens), Zerril Softbreeze (Zephras Isle), Derek Odds (Alterac Mountains), Repair Bot (Westfall), Repair Bot (Durotar), Repair Bot (Elwynn Forest), Kalsey Sanden (Redridge Mountains), Fimbo Greasemitz (Riverglades), Paige (Alterac Mountains), Qujo (The Hinterlands), Miranda Turner (Riverglades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2381,
                         npcName = "Micha Yance",
                         uiMapID = 1424,
@@ -2060,6 +2102,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 55,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2397,
                         npcName = "Derak Nightfall",
                         uiMapID = 1424,
@@ -2148,6 +2191,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 52.9,
                     },
                     {
+                        faction = "Horde",
                         npcID = 8307,
                         npcName = "Tarban Hearthgrain",
                         uiMapID = 1413,
@@ -2283,6 +2327,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 74.6,
                     },
                     {
+                        faction = "Horde",
                         npcID = 270780,
                         npcName = "Qujo",
                         uiMapID = 1425,
@@ -2459,6 +2504,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 28,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 4305,
                         npcName = "Kriggon Talsone",
                         uiMapID = 1436,
@@ -2473,6 +2519,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Malygen (Felwood), Bale (Felwood), Himmik (Winterspring)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2803,
                         npcName = "Malygen",
                         uiMapID = 1448,
@@ -2481,6 +2528,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 25.4,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2806,
                         npcName = "Bale",
                         uiMapID = 1448,
@@ -2692,6 +2740,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Vivianna (Feralas), Sheendra Tallgrass (Feralas)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7947,
                         npcName = "Vivianna",
                         uiMapID = 1444,
@@ -2715,6 +2764,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Vivianna (Feralas), Sheendra Tallgrass (Feralas)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7947,
                         npcName = "Vivianna",
                         uiMapID = 1444,
@@ -2738,6 +2788,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Vivianna (Feralas), Sheendra Tallgrass (Feralas)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7947,
                         npcName = "Vivianna",
                         uiMapID = 1444,

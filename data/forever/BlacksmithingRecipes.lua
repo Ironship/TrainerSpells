@@ -857,6 +857,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Jannos Ironwill (Arathi Highlands), Muuran (Desolace), Jazzrik (Badlands)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 1471,
                         npcName = "Jannos Ironwill",
                         uiMapID = 1417,
@@ -865,6 +866,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 47.4,
                     },
                     {
+                        faction = "Horde",
                         npcID = 8878,
                         npcName = "Muuran",
                         uiMapID = 1443,
@@ -2399,6 +2401,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -2407,6 +2410,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
@@ -2437,6 +2441,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -2445,6 +2450,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
@@ -2801,6 +2807,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -2809,6 +2816,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,

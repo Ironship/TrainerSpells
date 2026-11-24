@@ -168,6 +168,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Fradd Swiftgear (Wetlands), Jinky Twizzlefixxit (Thousand Needles)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2682,
                         npcName = "Fradd Swiftgear",
                         uiMapID = 1437,
@@ -257,6 +258,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Fradd Swiftgear (Wetlands), Namdo Bizzfizzle (Eastern Kingdoms) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2682,
                         npcName = "Fradd Swiftgear",
                         uiMapID = 1437,
@@ -265,6 +267,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 25.8,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 2683,
                         npcName = "Namdo Bizzfizzle",
                         uiMapID = 1415,

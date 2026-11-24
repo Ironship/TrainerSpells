@@ -100,6 +100,67 @@ local function GetSourceLocations(locations, playerFaction)
     return #result > 0 and result or nil
 end
 
+local function FormatSourceLocationsText(locations)
+    local vendors, seenVendors = {}, {}
+    local quests, seenQuests = {}, {}
+    for _, loc in ipairs(locations or {}) do
+        if loc.questID then
+            local name = loc.questName or tostring(loc.questID)
+            if not seenQuests[name] then
+                seenQuests[name] = true
+                table.insert(quests, name)
+            end
+        else
+            local label = loc.npcName and loc.zoneName and (loc.npcName .. " (" .. loc.zoneName .. ")") or loc.npcName or loc.zoneName
+            if label and not seenVendors[label] then
+                seenVendors[label] = true
+                table.insert(vendors, label)
+            end
+        end
+    end
+    local parts = {}
+    if #vendors > 0 then table.insert(parts, "Sold by " .. table.concat(vendors, ", ")) end
+    if #quests > 0 then table.insert(parts, "Quest reward: " .. table.concat(quests, ", ")) end
+    return parts
+end
+
+local function ExtractNonLocationSourceParts(rawSource)
+    local parts = {}
+    if type(rawSource) ~= "string" or rawSource == "" then return parts end
+    local start = 1
+    while true do
+        local sepStart, sepEnd = rawSource:find(" / ", start, true)
+        local segment = sepStart and rawSource:sub(start, sepStart - 1) or rawSource:sub(start)
+        if segment ~= "" and not segment:find("^Sold by ") and not segment:find("^Quest reward:") then
+            table.insert(parts, segment)
+        end
+        if not sepStart then break end
+        start = sepEnd + 1
+    end
+    return parts
+end
+
+local function ResolveRecipeSource(rawSource, rawLocations, playerFaction)
+    if type(rawLocations) ~= "table" or #rawLocations == 0 then
+        return true, rawSource, nil
+    end
+    local filtered = GetSourceLocations(rawLocations, playerFaction)
+    local extraParts = ExtractNonLocationSourceParts(rawSource)
+    if not filtered then
+        if #extraParts == 0 then return false, nil, nil end
+        return true, table.concat(extraParts, " / "), nil
+    end
+    if #filtered < #rawLocations then
+        local parts = FormatSourceLocationsText(filtered)
+        for _, part in ipairs(extraParts) do
+            table.insert(parts, part)
+        end
+        local text = #parts > 0 and table.concat(parts, " / ") or rawSource
+        return true, text, filtered
+    end
+    return true, rawSource, filtered
+end
+
 function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
     local allEntries = {}
     local knownMaxRank = {}
@@ -153,8 +214,9 @@ function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
             end
 
             local raceMatches = RaceMatches(race, playerRace)
+            local sourceMatches, resolvedSource, resolvedLocations = ResolveRecipeSource(source, sourceLocations, playerFaction)
 
-            if (not faction or not playerFaction or faction == playerFaction) and raceMatches then
+            if (not faction or not playerFaction or faction == playerFaction) and raceMatches and sourceMatches then
                 local name
                 if type(key) == "number" then
                     spellID = spellID or key
@@ -182,15 +244,16 @@ function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
                     cost = cost,
                     name = name,
                     icon = icon,
+                    recipeItemID = type(data) == "table" and data.recipeItemID,
                     rankNum = rankNum,
                     hasRealRank = hasRealRank,
                     directlyKnown = directlyKnown,
                     requires = requires,
                     levelReq = levelReq,
-                    source = source,
+                    source = resolvedSource,
                     questReward = type(data) == "table" and data.questReward,
                     questStart = type(data) == "table" and data.questStart,
-                    sourceLocations = GetSourceLocations(sourceLocations, playerFaction),
+                    sourceLocations = resolvedLocations,
                 }
 
                 if priceEligible and not entry.questReward then TrainerSpells.Pricing.Apply(entry, data, discount, factionName) end

@@ -235,6 +235,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Gina MacGregor (Westfall), Andrew Hilbert (Silverpine Forest), Mavralyn (Darkshore) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 843,
                         npcName = "Gina MacGregor",
                         uiMapID = 1436,
@@ -300,6 +301,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Gina MacGregor (Westfall), Andrew Hilbert (Silverpine Forest), Mavralyn (Darkshore) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 843,
                         npcName = "Gina MacGregor",
                         uiMapID = 1436,
@@ -342,6 +344,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Clyde Ranthal (Redridge Mountains) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2697,
                         npcName = "Clyde Ranthal",
                         uiMapID = 1433,
@@ -356,6 +359,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Amy Davenport (Redridge Mountains) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 777,
                         npcName = "Amy Davenport",
                         uiMapID = 1433,
@@ -1381,6 +1385,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 25.8,
                     },
                     {
+                        faction = "Horde",
                         npcID = 2698,
                         npcName = "George Candarte",
                         uiMapID = 1424,
@@ -1512,6 +1517,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Androd Fadran (Arathi Highlands)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2816,
                         npcName = "Androd Fadran",
                         uiMapID = 1417,
@@ -1532,6 +1538,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Micha Yance (Hillsbrad Foothills), Christoph Jeffcoat (Hillsbrad Foothills), Blixrez Goodstitch (Stranglethorn Vale) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2381,
                         npcName = "Micha Yance",
                         uiMapID = 1424,
@@ -1563,6 +1570,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Hammon Karwn (Arathi Highlands), Keena (Arathi Highlands), Lardan (Ashenvale), Jandia (Thousand Needles), Vendor-Tron 1000 (Desolace)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 2810,
                         npcName = "Hammon Karwn",
                         uiMapID = 1417,
@@ -1697,6 +1705,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 58,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 7852,
                         npcName = "Pratt McGrubben",
                         uiMapID = 1444,
@@ -2074,6 +2083,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Pratt McGrubben (Feralas), Jangdor Swiftstrider (Feralas) / World drop",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7852,
                         npcName = "Pratt McGrubben",
                         uiMapID = 1444,
@@ -2891,6 +2901,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Leonard Porter (Western Plaguelands), Werg Thickblade (Tirisfal Glades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 12942,
                         npcName = "Leonard Porter",
                         uiMapID = 1422,
@@ -2899,6 +2910,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 84.2,
                     },
                     {
+                        faction = "Horde",
                         npcID = 12943,
                         npcName = "Werg Thickblade",
                         uiMapID = 1420,
@@ -3209,6 +3221,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Pratt McGrubben (Feralas), Jangdor Swiftstrider (Feralas)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 7852,
                         npcName = "Pratt McGrubben",
                         uiMapID = 1444,
@@ -3274,6 +3287,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Leonard Porter (Western Plaguelands), Werg Thickblade (Tirisfal Glades)",
                 sourceLocations = {
                     {
+                        faction = "Alliance",
                         npcID = 12942,
                         npcName = "Leonard Porter",
                         uiMapID = 1422,
@@ -3282,6 +3296,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 84.2,
                     },
                     {
+                        faction = "Horde",
                         npcID = 12943,
                         npcName = "Werg Thickblade",
                         uiMapID = 1420,
@@ -3742,6 +3757,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -3750,6 +3766,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
@@ -4028,6 +4045,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                 source = "Sold by Argent Quartermaster Hasana (Tirisfal Glades), Argent Quartermaster Lightspark (Western Plaguelands), Quartermaster Miranda Breechlock (Eastern Plaguelands)",
                 sourceLocations = {
                     {
+                        faction = "Horde",
                         npcID = 10856,
                         npcName = "Argent Quartermaster Hasana",
                         uiMapID = 1420,
@@ -4036,6 +4054,7 @@ TrainerSpellsBuiltin_AddProfessionRecipes(
                         y = 68.2,
                     },
                     {
+                        faction = "Alliance",
                         npcID = 10857,
                         npcName = "Argent Quartermaster Lightspark",
                         uiMapID = 1422,
