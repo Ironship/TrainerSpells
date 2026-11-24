@@ -95,7 +95,7 @@ local function GetSourceLocations(locations, playerFaction)
     if type(locations) ~= "table" then return nil end
     local result = {}
     for _, location in ipairs(locations) do
-        if not location.faction or not playerFaction or location.faction == playerFaction then table.insert(result, location) end
+        if not location.faction or location.faction == "Neutral" or (playerFaction and location.faction == playerFaction) then table.insert(result, location) end
     end
     return #result > 0 and result or nil
 end

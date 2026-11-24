@@ -26,6 +26,7 @@ TrainerSpells_Character.learnedSpellsPet = TrainerSpells_Character.learnedSpells
 if TrainerSpells_Character.showIgnoredInTrainer == nil then TrainerSpells_Character.showIgnoredInTrainer = false end
 TrainerSpells_Character.rowHeight = TrainerSpells_Character.rowHeight or 32
 TrainerSpells_Character.weaponGrouping = TrainerSpells_Character.weaponGrouping or "weapon"
+TrainerSpells_Character.recipeGrouping = TrainerSpells_Character.recipeGrouping or "skill"
 if TrainerSpells_Character.hideLearnedWeaponSkills == nil then TrainerSpells_Character.hideLearnedWeaponSkills = true end
 if TrainerSpells_Character.beastHideLearned == nil then TrainerSpells_Character.beastHideLearned = true end
 if TrainerSpells_Character.hideStarterClassTrainers == nil then TrainerSpells_Character.hideStarterClassTrainers = false end

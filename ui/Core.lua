@@ -1033,7 +1033,8 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         elseif elementData.showLevel then
             if elementData.levelLabel then
                 local levelPrefix = entry.levelReq and (TrainerSpells:Trans("LID_LVL") .. " " .. entry.levelReq .. " ") or ""
-                rowFrame.levelFull = Colors.RANK .. levelPrefix .. elementData.levelLabel .. " " .. entry.level .. "|r"
+                local levelColor = elementData.colorLevel and elementData.color or Colors.RANK
+                rowFrame.levelFull = levelColor .. levelPrefix .. elementData.levelLabel .. " " .. entry.level .. "|r"
             else
                 rowFrame.levelFull = GetLevelDiffColorCode(entry.level) .. "Level " .. entry.level .. "|r"
                 rowFrame.levelShort = GetLevelDiffColorCode(entry.level) .. entry.level .. "|r"

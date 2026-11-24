@@ -520,6 +520,185 @@ function professionPicker.AddRankUnlock(items, searchText, professionKey)
     }}, "|cffffffff")
 end
 
+function TrainerSpells:GetRecipeGrouping()
+    local mode = TrainerSpells_Character and TrainerSpells_Character.recipeGrouping
+    return mode == "source" and "source" or "skill"
+end
+
+function TrainerSpells:GetRecipeGroupingLabel(mode)
+    return self:Trans(mode == "source" and "LID_GROUPBY_SOURCE" or "LID_GROUPBY_SKILL")
+end
+
+local recipeDropdownUpdaters = {}
+local function SyncRecipeGroupingDropdowns()
+    for _, update in ipairs(recipeDropdownUpdaters) do
+        update()
+    end
+end
+
+function TrainerSpells:CreateRecipeControls(parent, onChange)
+    local controls = CreateFrame("Frame", nil, parent)
+    controls:SetHeight(28)
+    controls:Hide()
+    local modernDropdown = MenuUtil and MenuUtil.CreateRootMenuDescription
+    local dropdown
+    if modernDropdown then
+        dropdown = CreateFrame("DropdownButton", nil, controls, "WowStyle1DropdownTemplate")
+        dropdown:SetSize(190, 26)
+    else
+        dropdown = CreateFrame("Frame", nil, controls, "UIDropDownMenuTemplate")
+        UIDropDownMenu_SetWidth(dropdown, 160)
+    end
+    dropdown:SetPoint("LEFT")
+    local measure = dropdown:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    measure:SetPoint("TOPLEFT")
+    measure:SetAlpha(0)
+    local function UpdateDropdown()
+        local text = TrainerSpells:GetRecipeGroupingLabel(TrainerSpells:GetRecipeGrouping())
+        if modernDropdown then
+            local width = 160
+            for _, mode in ipairs({"skill", "source"}) do
+                measure:SetText(TrainerSpells:GetRecipeGroupingLabel(mode))
+                width = math.max(width, math.ceil(measure:GetStringWidth()) + 38)
+            end
+            dropdown:SetWidth(width)
+            dropdown:SetText(text)
+        else
+            UIDropDownMenu_SetText(dropdown, text)
+        end
+    end
+    local function SelectGrouping(mode)
+        if TrainerSpells_Character then TrainerSpells_Character.recipeGrouping = mode end
+        SyncRecipeGroupingDropdowns()
+        if onChange then onChange() end
+        if TrainerSpells_ProfessionRefresh then TrainerSpells_ProfessionRefresh() end
+    end
+    if modernDropdown then
+        dropdown:SetupMenu(function(_, rootDescription)
+            for _, mode in ipairs({"skill", "source"}) do
+                local selectedMode = mode
+                rootDescription:CreateRadio(TrainerSpells:GetRecipeGroupingLabel(selectedMode), function()
+                    return TrainerSpells:GetRecipeGrouping() == selectedMode
+                end, function()
+                    SelectGrouping(selectedMode)
+                end)
+            end
+        end)
+    else
+        UIDropDownMenu_Initialize(dropdown, function()
+            for _, mode in ipairs({"skill", "source"}) do
+                local selectedMode = mode
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = TrainerSpells:GetRecipeGroupingLabel(selectedMode)
+                info.checked = TrainerSpells:GetRecipeGrouping() == selectedMode
+                info.func = function() SelectGrouping(selectedMode) end
+                UIDropDownMenu_AddButton(info)
+            end
+        end)
+    end
+    table.insert(recipeDropdownUpdaters, UpdateDropdown)
+    controls:SetScript("OnShow", UpdateDropdown)
+    UpdateDropdown()
+    return controls
+end
+
+local function CloneRecipeEntryWithLocations(entry, locations)
+    local copy = {}
+    for k, v in pairs(entry) do copy[k] = v end
+    copy.sourceLocations = locations
+    return copy
+end
+
+local function GetRecipeSourceTargets(entry)
+    local targets = {}
+    local locations = entry.sourceLocations
+    if type(locations) == "table" and #locations > 0 then
+        local seenVendors = {}
+        local questLocs = {}
+        for _, loc in ipairs(locations) do
+            if loc.questID then
+                table.insert(questLocs, loc)
+            else
+                local vendorID = loc.npcID and (tostring(loc.npcID) .. "_" .. tostring(loc.uiMapID or 0)) or ((loc.npcName or "") .. "_" .. (loc.zoneName or ""))
+                if not seenVendors[vendorID] then
+                    seenVendors[vendorID] = true
+                    local label = loc.npcName and loc.zoneName and (loc.npcName .. " (" .. loc.zoneName .. ")") or loc.npcName or loc.zoneName or TrainerSpells:Trans("LID_SOURCE")
+                    table.insert(targets, {key = "vendor_" .. vendorID, label = label, bucket = 1, entry = CloneRecipeEntryWithLocations(entry, {loc})})
+                end
+            end
+        end
+        if #questLocs > 0 then
+            table.insert(targets, {key = "quest", label = TrainerSpells:Trans("LID_QUEST_SPELL"), bucket = 2, entry = CloneRecipeEntryWithLocations(entry, questLocs)})
+        end
+    end
+    if #targets == 0 then
+        local src = entry.source
+        if not src or src == "" then
+            table.insert(targets, {key = "unknown", label = TrainerSpells:Trans("LID_UNKNOWNSOURCE"), bucket = 3, entry = entry})
+        elseif src:find("^Quest") then
+            table.insert(targets, {key = "quest", label = TrainerSpells:Trans("LID_QUEST_SPELL"), bucket = 2, entry = entry})
+        elseif src:find("^Sold by ") then
+            table.insert(targets, {key = "sold_" .. src, label = src, bucket = 1, entry = entry})
+        else
+            table.insert(targets, {key = "other_" .. src, label = src, bucket = 3, entry = entry})
+        end
+    end
+    return targets
+end
+
+function TrainerSpells:AppendRecipeSourceItems(items, groups, professionKey)
+    local Colors = TrainerSpells.UIColors
+    local unitLabel = TrainerSpells:Trans("LID_SKILL")
+    local statusBuckets = {
+        {list = groups.available, color = Colors.AVAILABLE, dim = false},
+        {list = groups.soon, color = Colors.SOON, dim = false},
+        {list = groups.higher, color = Colors.NOTYET, dim = false},
+        {list = groups.missingTalents, color = Colors.TALENT, dim = false},
+        {list = groups.ignored, color = Colors.IGNORED, dim = true},
+        {list = groups.known, color = Colors.KNOWN, dim = true},
+    }
+    local byKey = {}
+    local ordered = {}
+    for _, status in ipairs(statusBuckets) do
+        for _, entry in ipairs(status.list) do
+            for _, target in ipairs(GetRecipeSourceTargets(entry)) do
+                local group = byKey[target.key]
+                if not group then
+                    group = {key = target.key, label = target.label, bucket = target.bucket, color = status.color, rows = {}}
+                    byKey[target.key] = group
+                    table.insert(ordered, group)
+                end
+                table.insert(group.rows, {entry = target.entry, color = status.color, dim = status.dim})
+            end
+        end
+    end
+    table.sort(ordered, function(a, b)
+        if a.bucket ~= b.bucket then return a.bucket < b.bucket end
+        local al, bl = a.label:lower(), b.label:lower()
+        if al ~= bl then return al < bl end
+        return a.key < b.key
+    end)
+    for _, group in ipairs(ordered) do
+        local groupKey = "tradeskillrecipe_src_" .. (professionKey or "") .. "_" .. group.key
+        TrainerSpells:AddHeaderItem(items, group.label, group.color, nil, groupKey, nil, #group.rows, 0, "skill")
+        if not TrainerSpells:IsGroupCollapsed(groupKey) then
+            for _, row in ipairs(group.rows) do
+                table.insert(items, {
+                    isHeader = false,
+                    entry = row.entry,
+                    color = row.color,
+                    colorLevel = true,
+                    showLevel = true,
+                    showCostTooltip = false,
+                    dimName = row.dim,
+                    levelLabel = unitLabel,
+                    rowDepth = 0,
+                })
+            end
+        end
+    end
+end
+
 function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, professionKey, skillLineName, currentSkill)
     searchText = (searchText or ""):lower()
     local items = {}
@@ -531,7 +710,11 @@ function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, profession
         if data and next(data) then
             local groups = TrainerSpells:ClassifyEntries(data, searchText, currentSkill, true, professionKey)
             MarkProfessionEntries(groups, professionKey, true)
-            TrainerSpells:AppendGroupItems(items, groups, "tradeskillrecipe_", nil, TrainerSpells:Trans("LID_SKILL"), nil, nil, "skill")
+            if TrainerSpells:GetRecipeGrouping() == "source" then
+                TrainerSpells:AppendRecipeSourceItems(items, groups, professionKey)
+            else
+                TrainerSpells:AppendGroupItems(items, groups, "tradeskillrecipe_", nil, TrainerSpells:Trans("LID_SKILL"), nil, nil, "skill")
+            end
         end
 
         if #items == 0 then TrainerSpells:AddHeaderItem(items, skillLineName and TrainerSpells:Trans("LID_NORECIPEDATAFOR"):format(skillLineName) or TrainerSpells:Trans("LID_NOPROFESSIONDETECTED"), "|cffaaaaaa") end
@@ -561,7 +744,15 @@ function TrainerSpells_ProfessionRefresh()
     professionPicker.UpdateText()
 end
 
+local PositionProfessionFrame
 local professionSubTabs = {}
+function professionSubTabs.EnsureRecipeControls()
+    if not professionSubTabs.recipeControls then
+        professionSubTabs.recipeControls = TrainerSpells:CreateRecipeControls(professionFrame)
+    end
+    return professionSubTabs.recipeControls
+end
+
 function professionSubTabs.GetSavedView()
     local saved = TrainerSpells_Character and TrainerSpells_Character.professionView
     for _, view in ipairs(PROFESSION_SUB_VIEWS) do
@@ -586,7 +777,11 @@ function professionSubTabs.Select(mode)
     if TrainerSpells_Character then TrainerSpells_Character.professionView = mode end
     professionSubTabs.Update()
     if professionSubTabs.UpdateModeTabs then professionSubTabs.UpdateModeTabs() end
-    if professionFrame.compendiumHost then TrainerSpells:PositionCompendiumProfessions() end
+    if professionFrame.compendiumHost then
+        TrainerSpells:PositionCompendiumProfessions()
+    elseif PositionProfessionFrame and professionFrame:IsShown() then
+        PositionProfessionFrame()
+    end
     TrainerSpells_ProfessionRefresh()
 end
 
@@ -706,6 +901,7 @@ function TrainerSpells:PositionCompendiumProfessions()
     panel:SetAllPoints(host)
     professionSubTabs.bar:Hide()
     professionSubTabs.spoilerFree:Hide()
+    if professionSubTabs.recipeControls then professionSubTabs.recipeControls:Hide() end
     professionSubTabs.title:ClearAllPoints()
     professionSubTabs.title:SetPoint("BOTTOMLEFT", host.professionTabs[#host.professionTabs], "BOTTOMRIGHT", 12, 17)
     professionSubTabs.title:SetPoint("BOTTOMRIGHT", host, "TOPRIGHT", -180, 17)
@@ -738,12 +934,23 @@ end
 local tradeSkillViewBar = {buttons = {}}
 local function PlaceTradeSkillList(x, y)
     local barOffset = tradeSkillViewBar.Update and tradeSkillViewBar.Update(x, y) or 0
-    professionScrollBox:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", x, y + barOffset)
+    local recipeOffset = 0
+    local recipeControls = professionSubTabs.EnsureRecipeControls()
+    local showRecipe = professionViewMode == PROFESSION_VIEW_RECIPES
+    recipeControls:SetShown(showRecipe)
+    if showRecipe then
+        recipeControls:ClearAllPoints()
+        recipeControls:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", x, y + barOffset)
+        recipeControls:SetPoint("TOPRIGHT", professionFrame, "TOPRIGHT", -26, y + barOffset)
+        recipeOffset = -32
+    end
+    professionScrollBox:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", x, y + barOffset + recipeOffset)
 end
 
-local function PositionProfessionFrame()
+PositionProfessionFrame = function()
     if professionFrame.compendiumHost then TrainerSpells:PositionCompendiumProfessions(); return end
     if tradeSkillViewBar.frame then tradeSkillViewBar.frame:Hide() end
+    if professionSubTabs.recipeControls then professionSubTabs.recipeControls:Hide() end
     professionFrame:ClearAllPoints()
     if professionFrame.compendiumHost then
         professionFrame:SetScale(1)
@@ -809,10 +1016,20 @@ local function PositionProfessionFrame()
             professionRowHeightSlider:ClearAllPoints()
             professionRowHeightSlider:SetPoint("LEFT", spoilerFree.text, "RIGHT", 10 / sliderScale, 0)
             professionRowHeightSlider:SetPoint("RIGHT", panel, "TOPRIGHT", -30 / sliderScale, -18 / sliderScale)
-            professionScrollBox:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, -34)
+            local listTop = -34
+            local recipeControls = professionSubTabs.EnsureRecipeControls()
+            local showRecipe = not professionFrame.compendiumHost and professionViewMode == PROFESSION_VIEW_RECIPES
+            recipeControls:SetShown(showRecipe)
+            if showRecipe then
+                recipeControls:ClearAllPoints()
+                recipeControls:SetPoint("TOPLEFT", panel, "TOPLEFT", 14, -34)
+                recipeControls:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -14, -34)
+                listTop = -66
+            end
+            professionScrollBox:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, listTop)
             professionScrollBox:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -20, 0)
             professionScrollBar:ClearAllPoints()
-            professionScrollBar:SetPoint("TOPLEFT", panel, "TOPRIGHT", -16, -36)
+            professionScrollBar:SetPoint("TOPLEFT", panel, "TOPRIGHT", -16, listTop - 2)
             professionScrollBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", -16, 8)
             panel.borderFrame:SetFrameLevel(professionScrollBox:GetFrameLevel() + 20)
             professionScrollBar:SetFrameLevel(panel.borderFrame:GetFrameLevel() + 1)
@@ -1716,6 +1933,10 @@ function TrainerSpells:CreateCompendiumProfessions(host)
     local view = self:CreateCompendiumListView(host, PROFESSION_ALL_VIEWS, professionSubTabs.GetSavedView(), self.ProfessionRowHeight, function(entry) return IsProfessionViewEnabled(entry.mode) end)
     if not host.contentAPI then self.CompendiumProfessionView = view end
     view:AddSpoilerFreeCheckbox("professionSpoilerFree", "LID_PROFSPOILERFREE_DESC")
+    local recipeControls = self:CreateRecipeControls(host, function() view:Refresh() end)
+    recipeControls:SetPoint("TOPLEFT", host, "TOPLEFT", 4, -6)
+    recipeControls:SetPoint("TOPRIGHT", host, "TOPRIGHT", -4, -6)
+    view.controls = {{frame = recipeControls, mode = PROFESSION_VIEW_RECIPES, height = 38}}
     view.BuildItems = function(current)
         if not current.professionKey then
             local owned, others = professionPicker.GetLists()
