@@ -19,6 +19,10 @@ professionFrame:SetSize(420, 480)
 professionFrame:SetFrameStrata("HIGH")
 professionFrame:SetFrameLevel(500)
 professionFrame:EnableMouse(true)
+professionFrame:EnableMouseWheel(true)
+professionFrame:SetScript("OnMouseWheel", function() end)
+if professionFrame.SetPropagateMouseClicks then professionFrame:SetPropagateMouseClicks(false) end
+if professionFrame.SetPropagateMouseMotion then professionFrame:SetPropagateMouseMotion(false) end
 professionFrame:Hide()
 local professionSearchBox = CreateFrame("EditBox", "TrainerSpellsProfessionSearchBox", professionFrame, "SearchBoxTemplate")
 professionSearchBox:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", 8, -24)
@@ -1474,13 +1478,85 @@ local function UpdateProfessionsViewTabSelection()
 end
 professionSubTabs.UpdateModeTabs = UpdateProfessionsViewTabSelection
 
+professionSubTabs.hiddenPageAlpha = {}
+professionSubTabs.hiddenPageMouse = {}
+function professionSubTabs.CollectNativePages()
+    local pages = {}
+    local seen = {}
+    local function Add(page)
+        if page and not seen[page] then
+            seen[page] = true
+            table.insert(pages, page)
+        end
+    end
+    if ProfessionsFrame then
+        if ProfessionsFrame.Pages then
+            for _, page in ipairs(ProfessionsFrame.Pages) do Add(page) end
+        end
+        Add(ProfessionsFrame.BookPage)
+        Add(ProfessionsFrame.CraftingPage)
+        Add(ProfessionsFrame.SpecPage)
+        Add(ProfessionsFrame.OrdersPage)
+    end
+    return pages
+end
+
+function professionSubTabs.HideNativePages()
+    for _, page in ipairs(professionSubTabs.CollectNativePages()) do
+        if professionSubTabs.hiddenPageAlpha[page] == nil then
+            professionSubTabs.hiddenPageAlpha[page] = page:GetAlpha()
+        end
+        page:SetAlpha(0)
+    end
+    local crafting = ProfessionsFrame and ProfessionsFrame.CraftingPage
+    if crafting and not IsProfessionsCombatLocked() then
+        for _, key in ipairs({"RankBar", "CraftingOutputLog", "MinimizedSearchResults"}) do
+            local child = crafting[key]
+            if child and child.IsMouseEnabled and child:IsMouseEnabled() and not professionSubTabs.hiddenPageMouse[child] then
+                professionSubTabs.hiddenPageMouse[child] = true
+                child:EnableMouse(false)
+            end
+        end
+    end
+    if GameTooltip and GameTooltip:IsShown() then
+        local owner = GameTooltip:GetOwner()
+        if owner and owner ~= professionFrame and not professionSubTabs.IsOwnSideTab(owner, 0) then
+            local parent = owner
+            for _ = 1, 20 do
+                if not parent or parent == professionFrame then break end
+                if professionSubTabs.hiddenPageAlpha[parent] ~= nil then
+                    GameTooltip:Hide()
+                    break
+                end
+                parent = parent:GetParent()
+            end
+        end
+    end
+end
+
+local function RestoreProfessionsFramePage()
+    for page, alpha in pairs(professionSubTabs.hiddenPageAlpha) do
+        page:SetAlpha(alpha)
+    end
+    wipe(professionSubTabs.hiddenPageAlpha)
+    if next(professionSubTabs.hiddenPageMouse) then
+        if IsProfessionsCombatLocked() then
+            professionsRestorePending = true
+        else
+            professionsRestorePending = false
+            for child in pairs(professionSubTabs.hiddenPageMouse) do
+                child:EnableMouse(true)
+            end
+            wipe(professionSubTabs.hiddenPageMouse)
+        end
+    else
+        professionsRestorePending = false
+    end
+end
+
 local function CloseProfessionsFrameView()
     if professionFrame.compendiumHost then return end
-    if IsProfessionsCombatLocked() then
-        if professionsModeActive or professionFrame:IsShown() then professionsClosePending = true end
-        return
-    end
-
+    RestoreProfessionsFramePage()
     professionsClosePending = false
     professionsModeActive = false
     professionPicker.SetHeaderActive(false)
@@ -1519,25 +1595,6 @@ function professionSubTabs.HookForeignSideTabs()
     professionSubTabs.foreignClickWatcher:RegisterEvent("GLOBAL_MOUSE_UP")
 end
 
-local function RestoreProfessionsFramePage()
-    if not professionsModeActive then return end
-    if IsProfessionsCombatLocked() then
-        professionsRestorePending = true
-        return
-    end
-
-    professionsRestorePending = false
-    if professionsFrameUsesSideTabs then
-        if ProfessionsFrame.BookPage then ProfessionsFrame.BookPage:Hide() end
-        if ProfessionsFrame.CraftingPage then ProfessionsFrame.CraftingPage:Show() end
-    elseif ProfessionsFrame.GetTab and ProfessionsFrame.GetElementsForTab then
-        local tabID = ProfessionsFrame:GetTab()
-        for _, page in ipairs(tabID and ProfessionsFrame:GetElementsForTab(tabID) or {}) do
-            page:Show()
-        end
-    end
-end
-
 local professionsCombatWatcher = CreateFrame("Frame")
 professionsCombatWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
 professionsCombatWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -1559,14 +1616,7 @@ local function OpenProfessionsFrameView(mode)
     professionViewMode = professionSubTabs.GetSavedView()
     professionPicker.Reset()
     professionsModeActive = true
-    if ProfessionsFrame.Pages then
-        for _, page in ipairs(ProfessionsFrame.Pages) do
-            page:Hide()
-        end
-    else
-        if ProfessionsFrame.BookPage then ProfessionsFrame.BookPage:Hide() end
-        if ProfessionsFrame.CraftingPage then ProfessionsFrame.CraftingPage:Hide() end
-    end
+    professionSubTabs.HideNativePages()
 
     if professionsFrameUsesSideTabs or professionSubTabs.panel then
         professionListBg:Hide()
@@ -1709,13 +1759,6 @@ local function InstallProfessionsFrameShoulderTabs()
             end
         end
         local tab = indicators.visibleTabs and indicators.visibleTabs[indicators.currentIndex]
-        if tab and tab == ProfessionsFrame.ProfessionsOverviewTab then
-            if ProfessionsFrame.CraftingPage then ProfessionsFrame.CraftingPage:Hide() end
-            if ProfessionsFrame.BookPage then ProfessionsFrame.BookPage:Show() end
-        else
-            RestoreProfessionsFramePage()
-        end
-
         CloseProfessionsFrameView()
         if tab and tab.SetChecked then tab:SetChecked(true) end
     end)
