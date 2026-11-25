@@ -103,14 +103,56 @@ function TrainerSpells:BuildClassViewItems(viewMode, searchText)
     return items
 end
 
+function TrainerSpells:BuildClassViewItemsAsync(viewMode, searchText, callbacks)
+    searchText = (searchText or ""):lower()
+    local selectedLevel = UnitLevel("player") or 1
+    local selectedClass = select(2, UnitClass("player"))
+    local classData = selectedClass and TrainerSpells_Data and TrainerSpells_Data[selectedClass]
+    local questSpells = TrainerSpells.QuestSpells and TrainerSpells.QuestSpells[selectedClass]
+    if viewMode ~= "class" or (not classData and not questSpells) then
+        callbacks.onComplete(self:BuildClassViewItems(viewMode, searchText))
+        return
+    end
+
+    local function BuildFromGroups(groups, isPartial)
+        local items = {}
+        self:AppendGroupItems(items, groups, "")
+        if #items == 0 then
+            self:AddHeaderItem(items, isPartial and "..." or self:Trans("LID_NOENTRIES"), "|cffaaaaaa")
+        end
+        self:AddCostColumn(items)
+        return items
+    end
+
+    self:ClassifyEntriesAsync(classData or {}, searchText, selectedLevel, nil, nil, questSpells, {
+        isCancelled = callbacks.isCancelled,
+        onProgress = callbacks.onProgress and function(groups)
+            callbacks.onProgress(BuildFromGroups(groups, true))
+        end or nil,
+        onComplete = function(groups)
+            callbacks.onComplete(BuildFromGroups(groups, false))
+        end,
+    })
+end
+
 function TrainerSpells_Refresh()
     classFrame.tsRefreshQueued = nil
     if classFrame:IsShown() and not classFrame.prewarmingRows then
-        TrainerSpells:SetScrollBoxItems(scrollBox, TrainerSpells:BuildClassViewItems(TrainerSpells.ClassView, TrainerSpells_SearchText), {
+        local token = (scrollBox.tsBuildToken or 0) + 1
+        scrollBox.tsBuildToken = token
+        TrainerSpells:CancelScrollBoxLoad(scrollBox)
+        local opts = {
             owner = classFrame,
             detached = true,
             rowHeight = TrainerSpells.RowHeight,
-            immediate = true,
+        }
+        TrainerSpells:BuildClassViewItemsAsync(TrainerSpells.ClassView, TrainerSpells_SearchText, {
+            isCancelled = function()
+                return scrollBox.tsBuildToken ~= token or not classFrame:IsShown() or classFrame.prewarmingRows
+            end,
+            onComplete = function(items)
+                TrainerSpells:SetScrollBoxItems(scrollBox, items, opts)
+            end,
         })
     end
 
@@ -186,6 +228,7 @@ end)
 
 classFrame:SetScript("OnHide", function(self)
     if self.prewarmingRows then return end
+    scrollBox.tsBuildToken = (scrollBox.tsBuildToken or 0) + 1
     TrainerSpells:CancelScrollBoxLoad(scrollBox)
 end)
 

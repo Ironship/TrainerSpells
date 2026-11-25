@@ -161,9 +161,7 @@ local function ResolveRecipeSource(rawSource, rawLocations, playerFaction)
     return true, rawSource, filtered
 end
 
-function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
-    local allEntries = {}
-    local knownMaxRank = {}
+local function PrepareBuildContext(dataTable, questSpells)
     local playerFaction = TrainerSpells:GetPlayerFaction()
     local playerRace = TrainerSpells:GetPlayerRace()
     local discount, factionName = TrainerSpells.Pricing.GetBestDiscount()
@@ -201,66 +199,84 @@ function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
         dataTable = merged
     end
 
-    for lvl, spells in pairs(dataTable) do
+    return dataTable, {
+        playerFaction = playerFaction,
+        playerRace = playerRace,
+        discount = discount,
+        factionName = factionName,
+        priceEligible = priceEligible,
+        beasts = TrainerSpells.HunterBeasts,
+    }
+end
+
+local function AppendBuiltEntry(lvl, key, data, ctx, allEntries, knownMaxRank)
+    local cost, rank, status, requires, faction, race, spellID, icon, levelReq
+    local source, sourceLocations
+    if type(data) == "table" then
+        cost, rank, status, requires, faction, race = data.cost, data.rank, data.status, data.requires, data.faction, data.race
+        spellID, icon, levelReq = data.spellID, data.icon, data.levelReq
+        source, sourceLocations = data.source, data.sourceLocations
+    else
+        cost = data
+    end
+
+    local raceMatches = RaceMatches(race, ctx.playerRace)
+    local sourceMatches, resolvedSource, resolvedLocations = ResolveRecipeSource(source, sourceLocations, ctx.playerFaction)
+
+    if (not faction or not ctx.playerFaction or faction == ctx.playerFaction) and raceMatches and sourceMatches then
+        local name
+        if type(key) == "number" then
+            spellID = spellID or key
+            name, _, icon = TrainerSpells:GetSpellInfo(key)
+        else
+            name = key
+        end
+
+        name = name or ("SpellID " .. tostring(key))
+        if not icon and spellID then
+            local _, _, resolvedIcon = TrainerSpells:GetSpellInfo(spellID)
+            icon = resolvedIcon
+        end
+
+        icon = icon or "Interface\\Icons\\INV_Misc_QuestionMark"
+        local hasRealRank = (type(rank) == "number") or (type(rank) == "string" and rank:match("%d+") ~= nil)
+        local rankNum = (type(rank) == "number" and rank) or (type(rank) == "string" and tonumber(rank:match("%d+"))) or 1
+        local beasts = ctx.beasts
+        local isLearnedPetSpell = spellID and (TrainerSpells:IsPetSpellKnown(spellID) or (beasts and beasts.IsKnown and beasts.rankBySpell and beasts.rankBySpell[spellID] and beasts.IsKnown(spellID)))
+        local directlyKnown = (spellID and IsPlayerSpell and IsPlayerSpell(spellID)) or isLearnedPetSpell or status == "used"
+        local entry = {
+            level = lvl,
+            key = key,
+            spellID = spellID,
+            cost = cost,
+            name = name,
+            icon = icon,
+            recipeItemID = type(data) == "table" and data.recipeItemID,
+            rankNum = rankNum,
+            hasRealRank = hasRealRank,
+            directlyKnown = directlyKnown,
+            requires = requires,
+            levelReq = levelReq,
+            source = resolvedSource,
+            questReward = type(data) == "table" and data.questReward,
+            questStart = type(data) == "table" and data.questStart,
+            sourceLocations = resolvedLocations,
+        }
+
+        if ctx.priceEligible and not entry.questReward then TrainerSpells.Pricing.Apply(entry, data, ctx.discount, ctx.factionName) end
+
+        table.insert(allEntries, entry)
+        if directlyKnown and hasRealRank then knownMaxRank[name] = math.max(knownMaxRank[name] or 0, rankNum) end
+    end
+end
+
+function TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
+    local allEntries = {}
+    local knownMaxRank = {}
+    local resolvedTable, ctx = PrepareBuildContext(dataTable, questSpells)
+    for lvl, spells in pairs(resolvedTable) do
         for key, data in pairs(spells) do
-            local cost, rank, status, requires, faction, race, spellID, icon, levelReq
-            local source, sourceLocations
-            if type(data) == "table" then
-                cost, rank, status, requires, faction, race = data.cost, data.rank, data.status, data.requires, data.faction, data.race
-                spellID, icon, levelReq = data.spellID, data.icon, data.levelReq
-                source, sourceLocations = data.source, data.sourceLocations
-            else
-                cost = data
-            end
-
-            local raceMatches = RaceMatches(race, playerRace)
-            local sourceMatches, resolvedSource, resolvedLocations = ResolveRecipeSource(source, sourceLocations, playerFaction)
-
-            if (not faction or not playerFaction or faction == playerFaction) and raceMatches and sourceMatches then
-                local name
-                if type(key) == "number" then
-                    spellID = spellID or key
-                    name, _, icon = TrainerSpells:GetSpellInfo(key)
-                else
-                    name = key
-                end
-
-                name = name or ("SpellID " .. tostring(key))
-                if not icon and spellID then
-                    local _, _, resolvedIcon = TrainerSpells:GetSpellInfo(spellID)
-                    icon = resolvedIcon
-                end
-
-                icon = icon or "Interface\\Icons\\INV_Misc_QuestionMark"
-                local hasRealRank = (type(rank) == "number") or (type(rank) == "string" and rank:match("%d+") ~= nil)
-                local rankNum = (type(rank) == "number" and rank) or (type(rank) == "string" and tonumber(rank:match("%d+"))) or 1
-                local beasts = TrainerSpells.HunterBeasts
-                local isLearnedPetSpell = spellID and (TrainerSpells:IsPetSpellKnown(spellID) or (beasts and beasts.IsKnown and beasts.rankBySpell and beasts.rankBySpell[spellID] and beasts.IsKnown(spellID)))
-                local directlyKnown = (spellID and IsPlayerSpell and IsPlayerSpell(spellID)) or isLearnedPetSpell or status == "used"
-                local entry = {
-                    level = lvl,
-                    key = key,
-                    spellID = spellID,
-                    cost = cost,
-                    name = name,
-                    icon = icon,
-                    recipeItemID = type(data) == "table" and data.recipeItemID,
-                    rankNum = rankNum,
-                    hasRealRank = hasRealRank,
-                    directlyKnown = directlyKnown,
-                    requires = requires,
-                    levelReq = levelReq,
-                    source = resolvedSource,
-                    questReward = type(data) == "table" and data.questReward,
-                    questStart = type(data) == "table" and data.questStart,
-                    sourceLocations = resolvedLocations,
-                }
-
-                if priceEligible and not entry.questReward then TrainerSpells.Pricing.Apply(entry, data, discount, factionName) end
-
-                table.insert(allEntries, entry)
-                if directlyKnown and hasRealRank then knownMaxRank[name] = math.max(knownMaxRank[name] or 0, rankNum) end
-            end
+            AppendBuiltEntry(lvl, key, data, ctx, allEntries, knownMaxRank)
         end
     end
     return allEntries, knownMaxRank
@@ -287,10 +303,7 @@ function TrainerSpells:CreateSpoilerFreeCheckbox(parent, settingKey, descKey, on
     return checkbox
 end
 
-function TrainerSpells:ClassifyEntries(dataTable, searchText, selectedLevel, skipTalentCheck, professionKey, questSpells)
-    local allEntries, knownMaxRank = TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
-    local talentNames, learnedTalents
-    if not skipTalentCheck then talentNames, learnedTalents = TrainerSpells:GetTalentNameSet() end
+local function FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLevel, talentNames, learnedTalents, professionKey)
     local ignored, known, remaining = {}, {}, {}
     local spoilerLimit
     if professionKey then
@@ -378,6 +391,72 @@ function TrainerSpells:ClassifyEntries(dataTable, searchText, selectedLevel, ski
         known = known,
         nextLevel = nextLevel,
     }
+end
+
+function TrainerSpells:ClassifyEntries(dataTable, searchText, selectedLevel, skipTalentCheck, professionKey, questSpells)
+    local allEntries, knownMaxRank = TrainerSpells:BuildEntriesFromData(dataTable, questSpells)
+    local talentNames, learnedTalents
+    if not skipTalentCheck then talentNames, learnedTalents = TrainerSpells:GetTalentNameSet() end
+    return FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLevel, talentNames, learnedTalents, professionKey)
+end
+
+function TrainerSpells:ClassifyEntriesAsync(dataTable, searchText, selectedLevel, skipTalentCheck, professionKey, questSpells, callbacks)
+    local resolvedTable, ctx = PrepareBuildContext(dataTable, questSpells)
+    local levels = {}
+    for lvl in pairs(resolvedTable) do levels[#levels + 1] = lvl end
+    table.sort(levels)
+    local work = {}
+    for _, lvl in ipairs(levels) do
+        for key, data in pairs(resolvedTable[lvl]) do
+            work[#work + 1] = {lvl, key, data}
+        end
+    end
+
+    local total = #work
+    local talentNames, learnedTalents
+    if not skipTalentCheck then talentNames, learnedTalents = TrainerSpells:GetTalentNameSet() end
+    local allEntries = {}
+    local knownMaxRank = {}
+    if not C_Timer or total <= 25 then
+        for i = 1, total do
+            local item = work[i]
+            AppendBuiltEntry(item[1], item[2], item[3], ctx, allEntries, knownMaxRank)
+        end
+        callbacks.onComplete(FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLevel, talentNames, learnedTalents, professionKey))
+        return
+    end
+
+    local cursor = 1
+    local sentFirst = false
+    local lastProgress = 0
+    local function Step()
+        if callbacks.isCancelled and callbacks.isCancelled() then return end
+        local startTime = debugprofilestop and debugprofilestop() or nil
+        local count = 0
+        while cursor <= total and count < 18 do
+            local item = work[cursor]
+            cursor = cursor + 1
+            AppendBuiltEntry(item[1], item[2], item[3], ctx, allEntries, knownMaxRank)
+            count = count + 1
+            if startTime and (debugprofilestop() - startTime) >= 1.8 then break end
+        end
+
+        if cursor > total then
+            callbacks.onComplete(FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLevel, talentNames, learnedTalents, professionKey))
+            return
+        end
+
+        local now = GetTime and GetTime() or 0
+        if callbacks.onProgress and (not sentFirst or (now - lastProgress) >= 0.12) then
+            sentFirst = true
+            lastProgress = now
+            callbacks.onProgress(FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLevel, talentNames, learnedTalents, professionKey))
+        end
+
+        C_Timer.After(0, Step)
+    end
+
+    Step()
 end
 
 function TrainerSpells:AppendGroupItems(items, groups, keyPrefix, labelPrefix, unitLabel, showCost, headerDepth, countKind)

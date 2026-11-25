@@ -598,7 +598,7 @@ end
 
 function TrainerSpells.RunDetached(frame, func)
     local parent = frame:GetParent()
-    if not parent or parent == UIParent or frame.compendiumHost then
+    if not parent or parent == UIParent or frame.compendiumHost or not (TrainerSpells.IsGamepadNavActive() or (TrainerSpells.IsGamepadUIEnabled and TrainerSpells.IsGamepadUIEnabled())) then
         func()
         return
     end
@@ -644,7 +644,6 @@ function TrainerSpells:SetScrollBoxItems(scrollBox, items, options)
     local owner = options.owner
     local detached = options.detached
     local immediate = options.immediate
-    local rowHeight = math.max(10, options.rowHeight or self.RowHeight or 16)
     local state = scrollBox.tsLoadState
     if not state then
         state = {token = 0, warmed = 0}
@@ -652,101 +651,24 @@ function TrainerSpells:SetScrollBoxItems(scrollBox, items, options)
     end
 
     state.token = state.token + 1
-    local token = state.token
-    local total = #items
-    local function RunWrapped(fn)
-        if detached and owner then
-            TrainerSpells.RunDetached(owner, fn)
-        else
-            fn()
-        end
-    end
-
-    local boxHeight = scrollBox.GetHeight and scrollBox:GetHeight() or 0
-    if boxHeight <= 0 then boxHeight = 480 end
-    local visibleRows = math.ceil(boxHeight / rowHeight) + 3
-    local neededRows = math.min(total, visibleRows)
-    if not C_Timer or total <= 6 or state.warmed >= neededRows then
-        state.loading = false
-        state.incomplete = nil
-        RunWrapped(function()
-            scrollBox:SetDataProvider(CreateDataProvider(items), ScrollBoxConstants.RetainScrollPosition)
-            if immediate and ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
-        end)
-        if neededRows > state.warmed then state.warmed = neededRows end
-        return
-    end
-
-    local function InsertBatch(dp, batch)
-        if dp.InsertTable then
-            dp:InsertTable(batch)
-        else
-            for i = 1, #batch do dp:Insert(batch[i]) end
-        end
-    end
-
-    local firstCount = math.min(total, math.max(4, state.warmed + 4))
-    local firstItems = {}
-    for i = 1, firstCount do firstItems[i] = items[i] end
-    local dp = CreateDataProvider(firstItems)
-    state.loading = true
+    state.loading = false
     state.incomplete = nil
-    RunWrapped(function()
-        scrollBox:SetDataProvider(dp, ScrollBoxConstants.RetainScrollPosition)
-    end)
-    if firstCount > state.warmed then state.warmed = firstCount end
-    local index = firstCount + 1
-    if index > total then
-        state.loading = false
-        return
+    local function Apply()
+        scrollBox:SetDataProvider(CreateDataProvider(items), ScrollBoxConstants.RetainScrollPosition)
+        if immediate and ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
     end
 
-    local function Step()
-        if state.token ~= token then return end
-        if owner and owner.IsShown and not owner:IsShown() then
-            state.loading = false
-            state.incomplete = true
-            return
-        end
-
-        local startTime = debugprofilestop and debugprofilestop() or nil
-        RunWrapped(function()
-            if index <= neededRows then
-                local limit = math.min(neededRows, index + 3)
-                local batch = {}
-                for i = index, limit do batch[#batch + 1] = items[i] end
-                index = limit + 1
-                InsertBatch(dp, batch)
-                if (index - 1) > state.warmed then state.warmed = index - 1 end
-                if startTime and index <= neededRows and (debugprofilestop() - startTime) < 1.2 then
-                    local extraLimit = math.min(neededRows, index + 1)
-                    local extra = {}
-                    for i = index, extraLimit do extra[#extra + 1] = items[i] end
-                    index = extraLimit + 1
-                    InsertBatch(dp, extra)
-                    if (index - 1) > state.warmed then state.warmed = index - 1 end
-                end
-            else
-                local limit = math.min(total, index + 99)
-                local batch = {}
-                for i = index, limit do batch[#batch + 1] = items[i] end
-                index = limit + 1
-                InsertBatch(dp, batch)
-            end
-
-            if immediate and ScrollBoxConstants.UpdateImmediately and index > total then
-                scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
-            end
-        end)
-
-        if index <= total then
-            C_Timer.After(0, Step)
-        else
-            state.loading = false
-        end
+    if detached and owner then
+        TrainerSpells.RunDetached(owner, Apply)
+    else
+        Apply()
     end
 
-    C_Timer.After(0, Step)
+    local rowHeight = math.max(10, options.rowHeight or self.RowHeight or 16)
+    local boxHeight = scrollBox.GetHeight and scrollBox:GetHeight() or 480
+    if boxHeight <= 0 then boxHeight = 480 end
+    local visibleRows = math.min(#items, math.ceil(boxHeight / rowHeight) + 3)
+    if visibleRows > state.warmed then state.warmed = visibleRows end
 end
 
 function TrainerSpells:CancelPrewarm(frame)
@@ -1573,4 +1495,84 @@ TrainerSpells.BuildScrollRow = TrainerSpells.InitScrollRow
 function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
     self:BuildScrollRow(rowFrame, elementData, rowHeight)
     self:ApplyRowTextTheme(rowFrame, elementData)
+end
+
+do
+    local perfActive = false
+    local perfData = {}
+    local perfCounts = {}
+    local perfFrame
+    local function WrapPerf(tbl, key, label)
+        local orig = tbl and tbl[key]
+        if type(orig) ~= "function" then return end
+        tbl[key] = function(...)
+            local t0 = debugprofilestop()
+            local r1, r2, r3, r4, r5, r6, r7 = orig(...)
+            local dt = debugprofilestop() - t0
+            perfData[label] = (perfData[label] or 0) + dt
+            perfCounts[label] = (perfCounts[label] or 0) + 1
+            return r1, r2, r3, r4, r5, r6, r7
+        end
+    end
+
+    SLASH_TRAINERSPELLSPERF1 = "/tsperf"
+    SlashCmdList["TRAINERSPELLSPERF"] = function()
+        if perfActive then
+            perfActive = false
+            if perfFrame then perfFrame:SetScript("OnUpdate", nil) end
+            print("TrainerSpells perf OFF")
+            return
+        end
+
+        perfActive = true
+        if not perfFrame then
+            WrapPerf(TrainerSpells, "InitScrollRow", "InitRow")
+            WrapPerf(TrainerSpells, "BuildScrollRow", "RowBody")
+            WrapPerf(TrainerSpells, "ApplyRowTextTheme", "Theme")
+            WrapPerf(TrainerSpells, "ApplyRowStripe", "Stripe")
+            WrapPerf(TrainerSpells, "ApplyRowInteraction", "Interact")
+            WrapPerf(TrainerSpells, "PrepareGamepadNavigation", "Gamepad")
+            WrapPerf(TrainerSpells, "GetRowCategoryBackground", "Backdrop")
+            WrapPerf(TrainerSpells, "SetScrollBoxItems", "SetItems")
+            WrapPerf(TrainerSpells, "RunDetached", "Detach")
+            WrapPerf(TrainerSpells, "AppendRecipeSourceItems", "SrcGrp")
+            WrapPerf(TrainerSpells, "ClassifyEntriesAsync", "ClassAsync")
+            WrapPerf(TrainerSpells, "GetSpellInfo", "SpellInfo")
+            for _, sbName in ipairs({"TrainerSpellsProfessionScrollBox", "TrainerSpellsScrollBox"}) do
+                local sb = _G[sbName]
+                if sb then
+                    WrapPerf(sb, "SetDataProvider", "SetDP")
+                    WrapPerf(sb, "FullUpdate", "FullUp")
+                    WrapPerf(sb, "Update", "SBUp")
+                    local v = sb.GetView and sb:GetView()
+                    if v then
+                        WrapPerf(v, "RecalculateExtentWithPadding", "VExt")
+                        WrapPerf(v, "ValidateDataRange", "VRange")
+                        WrapPerf(v, "InvokeInitializers", "VInit")
+                        WrapPerf(v, "AcquireInternal", "VAcq")
+                        WrapPerf(v, "Release", "VRel")
+                    end
+                end
+            end
+            perfFrame = CreateFrame("Frame")
+        end
+
+        local last = debugprofilestop()
+        perfFrame:SetScript("OnUpdate", function()
+            local now = debugprofilestop()
+            local dt = now - last
+            last = now
+            if dt > 50 then
+                local parts = {}
+                for k, v in pairs(perfData) do
+                    if v >= 1 then table.insert(parts, k .. "=" .. math.floor(v) .. "ms(" .. (perfCounts[k] or 0) .. ")") end
+                end
+                table.sort(parts)
+                print("TSPERF frame=" .. math.floor(dt) .. "ms " .. table.concat(parts, " "))
+            end
+            wipe(perfData)
+            wipe(perfCounts)
+        end)
+        print("TrainerSpells perf ON (taintLog=" .. tostring(GetCVar and GetCVar("taintLog")) .. " scriptProfile=" .. tostring(GetCVar and GetCVar("scriptProfile")) .. " gamepad=" .. tostring(TrainerSpells.IsGamepadNavActive()) .. ")")
+    end
 end

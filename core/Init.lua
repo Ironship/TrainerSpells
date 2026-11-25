@@ -181,11 +181,10 @@ function TrainerSpells:GetSpellInfo(spell)
 
     local info = C_Spell.GetSpellInfo(spell)
     if not info then return nil end
-    local subText = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(info.spellID)
     if type(spell) == "number" and info.name and info.name ~= "" then
-        self.SpellInfoCache[spell] = {info.name, subText, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID}
+        self.SpellInfoCache[spell] = {info.name, nil, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID}
     end
-    return info.name, subText, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID
+    return info.name, nil, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID
 end
 
 function TrainerSpells:GetTooltipSpellID(tooltip)

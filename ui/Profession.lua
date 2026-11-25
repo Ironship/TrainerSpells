@@ -752,16 +752,87 @@ function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, profession
     return items
 end
 
+function TrainerSpells:BuildProfessionViewItemsAsync(viewMode, searchText, professionKey, skillLineName, currentSkill, callbacks)
+    searchText = (searchText or ""):lower()
+    if viewMode == PROFESSION_VIEW_TRAINERS then
+        callbacks.onComplete(self:BuildProfessionViewItems(viewMode, searchText, professionKey, skillLineName, currentSkill))
+        return
+    end
+
+    local isRecipes = viewMode == PROFESSION_VIEW_RECIPES
+    local sourceTable = isRecipes and TrainerSpells_RecipeData or TrainerSpells_ProfessionData
+    local data = professionKey and sourceTable and sourceTable[professionKey]
+    if not data or not next(data) then
+        callbacks.onComplete(self:BuildProfessionViewItems(viewMode, searchText, professionKey, skillLineName, currentSkill))
+        return
+    end
+
+    local grouping = isRecipes and self:GetRecipeGrouping() or "skill"
+    local function BuildFromGroups(groups, isPartial)
+        local items = {}
+        if professionKey and not isRecipes then
+            professionPicker.AddRankUnlock(items, searchText, professionKey)
+        end
+        MarkProfessionEntries(groups, professionKey, isRecipes)
+        if isRecipes then
+            if grouping == "source" then
+                self:AppendRecipeSourceItems(items, groups, professionKey)
+            else
+                self:AppendGroupItems(items, groups, "tradeskillrecipe_", nil, self:Trans("LID_SKILL"), nil, nil, "skill")
+            end
+            if #items == 0 then
+                if isPartial then
+                    self:AddHeaderItem(items, "...", "|cffaaaaaa")
+                else
+                    self:AddHeaderItem(items, skillLineName and self:Trans("LID_NORECIPEDATAFOR"):format(skillLineName) or self:Trans("LID_NOPROFESSIONDETECTED"), "|cffaaaaaa")
+                end
+            end
+        else
+            self:AppendGroupItems(items, groups, "tradeskillprofession_", nil, self:Trans("LID_SKILL"), nil, nil, "skill")
+            if #items == 0 then
+                if isPartial then
+                    self:AddHeaderItem(items, "...", "|cffaaaaaa")
+                else
+                    self:AddHeaderItem(items, skillLineName and self:Trans("LID_NODATAFOR"):format(skillLineName) or self:Trans("LID_NOPROFESSIONDETECTED"), "|cffaaaaaa")
+                end
+            end
+        end
+        self:AddCostColumn(items)
+        return items
+    end
+
+    self:ClassifyEntriesAsync(data, searchText, currentSkill, true, professionKey, nil, {
+        isCancelled = callbacks.isCancelled,
+        onProgress = callbacks.onProgress and function(groups)
+            callbacks.onProgress(BuildFromGroups(groups, true))
+        end or nil,
+        onComplete = function(groups)
+            callbacks.onComplete(BuildFromGroups(groups, false))
+        end,
+    })
+end
+
 function TrainerSpells_ProfessionRefresh()
     professionFrame.tsRefreshQueued = nil
     if professionFrame:IsShown() and not professionFrame.prewarmingRows then
         local key, name, rank = professionPicker.GetActive()
-        TrainerSpells:SetScrollBoxItems(professionScrollBox, TrainerSpells:BuildProfessionViewItems(professionViewMode, TrainerSpells_ProfessionSearchText, key, name, rank), {
+        local token = (professionScrollBox.tsBuildToken or 0) + 1
+        professionScrollBox.tsBuildToken = token
+        TrainerSpells:CancelScrollBoxLoad(professionScrollBox)
+        professionPicker.UpdateText()
+        local opts = {
             owner = professionFrame,
             detached = not professionFrame.compendiumHost,
             rowHeight = TrainerSpells.ProfessionRowHeight,
+        }
+        TrainerSpells:BuildProfessionViewItemsAsync(professionViewMode, TrainerSpells_ProfessionSearchText, key, name, rank, {
+            isCancelled = function()
+                return professionScrollBox.tsBuildToken ~= token or not professionFrame:IsShown() or professionFrame.prewarmingRows
+            end,
+            onComplete = function(items)
+                TrainerSpells:SetScrollBoxItems(professionScrollBox, items, opts)
+            end,
         })
-        professionPicker.UpdateText()
     end
 
     if TrainerSpells.CompendiumProfessionView and TrainerSpells.CompendiumProfessionView.host and TrainerSpells.CompendiumProfessionView.host:IsShown() then
@@ -785,6 +856,7 @@ end
 
 professionFrame:HookScript("OnHide", function(self)
     if self.prewarmingRows then return end
+    professionScrollBox.tsBuildToken = (professionScrollBox.tsBuildToken or 0) + 1
     TrainerSpells:CancelScrollBoxLoad(professionScrollBox)
 end)
 
@@ -2018,7 +2090,7 @@ function TrainerSpells:CreateCompendiumProfessions(host)
     recipeControls:SetPoint("TOPLEFT", host, "TOPLEFT", 4, -6)
     recipeControls:SetPoint("TOPRIGHT", host, "TOPRIGHT", -4, -6)
     view.controls = {{frame = recipeControls, mode = PROFESSION_VIEW_RECIPES, height = 38}}
-    view.BuildItems = function(current)
+    local function PrepareCompendiumProfession(current)
         if not current.professionKey then
             local owned, others = professionPicker.GetLists()
             current.professionKey = owned[1] and owned[1].key or others[1] and others[1].key
@@ -2029,7 +2101,15 @@ function TrainerSpells:CreateCompendiumProfessions(host)
             professionPicker.UpdateWidth(current.dropdown, current.measure)
             current.title:SetPoint("BOTTOMRIGHT", host, "TOPRIGHT", -current.dropdown:GetWidth() - 10, 17)
         end
+        return info
+    end
+    view.BuildItems = function(current)
+        local info = PrepareCompendiumProfession(current)
         return TrainerSpells:BuildProfessionViewItems(current.mode, host.searchText, current.professionKey, info and info.name, info and info.rank or 0)
+    end
+    view.BuildItemsAsync = function(current, callbacks)
+        local info = PrepareCompendiumProfession(current)
+        TrainerSpells:BuildProfessionViewItemsAsync(current.mode, host.searchText, current.professionKey, info and info.name, info and info.rank or 0, callbacks)
     end
     if MenuUtil and MenuUtil.CreateRootMenuDescription then
         view.dropdown = CreateFrame("DropdownButton", nil, host, "WowStyle1DropdownTemplate")

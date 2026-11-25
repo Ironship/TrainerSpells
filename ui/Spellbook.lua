@@ -504,7 +504,13 @@ function TrainerSpells:ApplyClassPanelTextTheme()
     for _, controls in ipairs({self.WeaponControls or false, self.ClassTrainerControls or false, self.BeastControls or false}) do
         if controls then self:ApplyPanelTextTheme(controls) end
     end
-    if (previous or false) ~= light and TrainerSpells_Refresh then C_Timer.After(0, TrainerSpells_Refresh) end
+    if (previous or false) ~= light then
+        if TrainerSpells.ScheduleClassRefresh then
+            TrainerSpells:ScheduleClassRefresh()
+        elseif TrainerSpells_Refresh then
+            C_Timer.After(0, TrainerSpells_Refresh)
+        end
+    end
 end
 
 function playerSpellsSubTabs.GetSavedView()
@@ -1543,11 +1549,25 @@ function TrainerSpells:CreateCompendiumListView(host, entries, mode, rowHeight, 
     function view:Refresh()
         self.refreshQueued = nil
         self:UpdateHeaderAndLayout()
-        if self.BuildItems and host:IsShown() then
-            TrainerSpells:SetScrollBoxItems(self.scrollBox, self:BuildItems(), {
-                owner = host,
-                rowHeight = self.rowHeight,
+        if not host:IsShown() then return end
+        local token = (self.scrollBox.tsBuildToken or 0) + 1
+        self.scrollBox.tsBuildToken = token
+        TrainerSpells:CancelScrollBoxLoad(self.scrollBox)
+        local opts = {
+            owner = host,
+            rowHeight = self.rowHeight,
+        }
+        if self.BuildItemsAsync then
+            self:BuildItemsAsync({
+                isCancelled = function()
+                    return self.scrollBox.tsBuildToken ~= token or not host:IsShown()
+                end,
+                onComplete = function(items)
+                    TrainerSpells:SetScrollBoxItems(self.scrollBox, items, opts)
+                end,
             })
+        elseif self.BuildItems then
+            TrainerSpells:SetScrollBoxItems(self.scrollBox, self:BuildItems(), opts)
         end
     end
     function view:ScheduleRefresh()
@@ -1563,7 +1583,10 @@ function TrainerSpells:CreateCompendiumListView(host, entries, mode, rowHeight, 
             if host:IsShown() then self:Refresh() end
         end)
     end
-    host:HookScript("OnHide", function() TrainerSpells:CancelScrollBoxLoad(view.scrollBox) end)
+    host:HookScript("OnHide", function()
+        view.scrollBox.tsBuildToken = (view.scrollBox.tsBuildToken or 0) + 1
+        TrainerSpells:CancelScrollBoxLoad(view.scrollBox)
+    end)
     host.OnSearchChanged = function() view:Refresh() end
     host:SetScript("OnSizeChanged", function()
         api.PositionHeaderSlider(view.slider)
@@ -1583,6 +1606,7 @@ function TrainerSpells:CreateCompendiumClass(host)
     local view = self:CreateCompendiumListView(host, playerSpellsSubTabs.allViews, playerSpellsSubTabs.GetSavedView(), self.RowHeight, function(entry) return TrainerSpells:IsTabEnabled(entry.view) end)
     if not host.contentAPI then self.CompendiumClassView = view end
     view.BuildItems = function(current) return TrainerSpells:BuildClassViewItems(current.mode, host.searchText) end
+    view.BuildItemsAsync = function(current, callbacks) TrainerSpells:BuildClassViewItemsAsync(current.mode, host.searchText, callbacks) end
     view:AddSpoilerFreeCheckbox("spoilerFree", "LID_SPOILERFREE_DESC", "class")
     view.controls = {}
     for _, entry in ipairs({{self.CreateClassTrainerControls, "trainers", 48}, {self.CreateBeastControls, "beasts", 48}, {self.CreateWeaponControls, "weapons", 40}}) do
