@@ -812,6 +812,7 @@ local function OpenPlayerSpellsPanel()
     if classFrame.compendiumHost then TrainerSpells:UndockCompendiumFrame(classFrame) end
     local book = GetPlayerSpellsBook()
     if not book then return end
+    TrainerSpells:CancelPrewarm(classFrame)
     PositionPlayerSpellsFrame()
     HidePlayerSpellsContent()
     TrainerSpells.RunDetached(classFrame, function() classFrame:Show() end)
@@ -1158,6 +1159,7 @@ function playerSpellsSubTabs.InstallGamepadCycling(book)
             gamepadState = gamepad
             TrainerSpells:PrepareGamepadNavigation(playerSpellsModeTabContainer, gamepad)
             TrainerSpells:PrepareGamepadNavigation(classFrame, gamepad)
+            if gamepad and not classFrame:IsShown() then playerSpellsSubTabs.PrewarmRows() end
             if TrainerSpells_Refresh then TrainerSpells_Refresh() end
         end
 
@@ -1261,27 +1263,22 @@ end
 
 function playerSpellsSubTabs.PrewarmRows()
     if classFrame:IsShown() or classFrame.compendiumHost then return end
-    PositionPlayerSpellsFrame()
     local scrollBox = TrainerSpells.ClassScrollBox
-    local rowHeight = TrainerSpells.RowHeight
-    TrainerSpells.RowHeight = TrainerSpells.MinRowHeight
-    scrollBox:ClearAllPoints()
-    scrollBox:SetAllPoints(classFrame)
-    local items = {}
-    for index = 1, math.ceil(classFrame:GetHeight() / TrainerSpells.MinRowHeight) + 2 do
-        items[index] = {entry = {name = ""}}
-    end
-
-    TrainerSpells.RunDetached(classFrame, function()
-        classFrame.prewarmingRows = true
-        classFrame:Show()
-        scrollBox:SetDataProvider(CreateDataProvider(items))
-        if ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
-        classFrame:Hide()
-        scrollBox:RemoveDataProvider()
-        classFrame.prewarmingRows = nil
-    end)
-    TrainerSpells.RowHeight = rowHeight
+    TrainerSpells:StartIncrementalPrewarm(classFrame, scrollBox, {
+        getHeight = function()
+            local h = classFrame:GetHeight()
+            return (h and h > 0) and h or 520
+        end,
+        getRowHeight = function() return TrainerSpells.RowHeight end,
+        prepare = function()
+            PositionPlayerSpellsFrame()
+            scrollBox:ClearAllPoints()
+            scrollBox:SetAllPoints(classFrame)
+        end,
+        restore = function()
+            if not classFrame.compendiumHost then PositionPlayerSpellsFrame() end
+        end,
+    })
 end
 
 local function InstallPlayerSpellsIntegration()
@@ -1523,7 +1520,7 @@ function TrainerSpells:CreateCompendiumListView(host, entries, mode, rowHeight, 
         self.spoilerFree:SetPoint("LEFT", self.slider, "RIGHT", 30, 0)
         self.spoilerFreeMode = onlyMode
     end
-    function view:Refresh()
+    function view:UpdateHeaderAndLayout()
         self:EnsureVisibleMode()
         for index, tab in ipairs(self.tabs) do
             tab:SetTabSelected(tab.mode == self.mode)
@@ -1542,8 +1539,31 @@ function TrainerSpells:CreateCompendiumListView(host, entries, mode, rowHeight, 
         self.scrollBox:ClearAllPoints()
         self.scrollBox:SetPoint("TOPLEFT", host, "TOPLEFT", 0, offset)
         self.scrollBox:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", -24, 0)
-        if self.BuildItems then self.scrollBox:SetDataProvider(CreateDataProvider(self:BuildItems()), ScrollBoxConstants.RetainScrollPosition) end
     end
+    function view:Refresh()
+        self.refreshQueued = nil
+        self:UpdateHeaderAndLayout()
+        if self.BuildItems and host:IsShown() then
+            TrainerSpells:SetScrollBoxItems(self.scrollBox, self:BuildItems(), {
+                owner = host,
+                rowHeight = self.rowHeight,
+            })
+        end
+    end
+    function view:ScheduleRefresh()
+        self:UpdateHeaderAndLayout()
+        if not C_Timer then
+            self:Refresh()
+            return
+        end
+        if self.refreshQueued then return end
+        self.refreshQueued = true
+        C_Timer.After(0, function()
+            self.refreshQueued = nil
+            if host:IsShown() then self:Refresh() end
+        end)
+    end
+    host:HookScript("OnHide", function() TrainerSpells:CancelScrollBoxLoad(view.scrollBox) end)
     host.OnSearchChanged = function() view:Refresh() end
     host:SetScript("OnSizeChanged", function()
         api.PositionHeaderSlider(view.slider)
@@ -1574,7 +1594,7 @@ function TrainerSpells:CreateCompendiumClass(host)
             table.insert(view.controls, {frame = controls, mode = entry[2], height = entry[3]})
         end
     end
-    host:SetScript("OnShow", function() view:Refresh() end)
+    host:SetScript("OnShow", function() view:ScheduleRefresh() end)
     return view
 end
 function TrainerSpells:RegisterCompendiumTabs()

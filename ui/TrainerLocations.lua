@@ -3,7 +3,20 @@ local TrainerLocations = {}
 TrainerSpells.TrainerLocations = TrainerLocations
 local localeAliases = {enGB = "enUS"}
 local factionTokens = {Alliance = "A", Horde = "H"}
-local creatureInfo = {cache = {}, tries = {}, listeners = {}, scheduled = false}
+local creatureInfo = {
+    cache = {},
+    tries = {},
+    listeners = {},
+    queue = {},
+    queued = {},
+    retryQueue = {},
+    retryQueued = {},
+    head = 1,
+    processing = false,
+    retryScheduled = false,
+    dirty = false,
+    lastNotify = 0,
+}
 
 function TrainerLocations.AddResolveListener(callback)
     table.insert(creatureInfo.listeners, callback)
@@ -35,12 +48,78 @@ local function ReadCreatureTooltip(npcID)
     return name, subtitle
 end
 
-local function ScheduleRetry()
-    if creatureInfo.scheduled or not C_Timer then return end
-    creatureInfo.scheduled = true
-    C_Timer.After(1, function()
-        creatureInfo.scheduled = false
-        for _, callback in ipairs(creatureInfo.listeners) do callback() end
+local function ResolveCreatureNow(npcID)
+    if not npcID or creatureInfo.cache[npcID] then return false end
+    local tries = creatureInfo.tries[npcID] or 0
+    if tries >= 3 then return false end
+    creatureInfo.tries[npcID] = tries + 1
+    local name, subtitle = ReadCreatureTooltip(npcID)
+    if IsUsableText(name) then
+        if not IsUsableText(subtitle) or subtitle:find("%d") then subtitle = nil end
+        creatureInfo.cache[npcID] = {name = name, subtitle = subtitle}
+        creatureInfo.dirty = true
+    elseif tries + 1 < 3 and not creatureInfo.retryQueued[npcID] then
+        creatureInfo.retryQueued[npcID] = true
+        table.insert(creatureInfo.retryQueue, npcID)
+    end
+    return true
+end
+
+local function ScheduleQueue()
+    if creatureInfo.processing or not C_Timer then return end
+    creatureInfo.processing = true
+    C_Timer.After(0.05, function()
+        creatureInfo.processing = false
+        if IsInInstance() then
+            creatureInfo.queue = {}
+            creatureInfo.queued = {}
+            creatureInfo.head = 1
+            return
+        end
+
+        local startTime = debugprofilestop and debugprofilestop() or nil
+        local processed = 0
+        while creatureInfo.head <= #creatureInfo.queue and processed < 4 do
+            local npcID = creatureInfo.queue[creatureInfo.head]
+            creatureInfo.queue[creatureInfo.head] = nil
+            creatureInfo.head = creatureInfo.head + 1
+            creatureInfo.queued[npcID] = nil
+            if ResolveCreatureNow(npcID) then processed = processed + 1 end
+            if startTime and (debugprofilestop() - startTime) >= 1.5 then break end
+        end
+
+        if creatureInfo.head > #creatureInfo.queue then
+            creatureInfo.queue = {}
+            creatureInfo.head = 1
+        end
+
+        if #creatureInfo.retryQueue > 0 and not creatureInfo.retryScheduled then
+            creatureInfo.retryScheduled = true
+            C_Timer.After(1, function()
+                creatureInfo.retryScheduled = false
+                local retry = creatureInfo.retryQueue
+                creatureInfo.retryQueue = {}
+                creatureInfo.retryQueued = {}
+                for _, id in ipairs(retry) do
+                    if not creatureInfo.cache[id] and not creatureInfo.queued[id] then
+                        creatureInfo.queued[id] = true
+                        table.insert(creatureInfo.queue, id)
+                    end
+                end
+                if creatureInfo.head <= #creatureInfo.queue then ScheduleQueue() end
+            end)
+        end
+
+        if creatureInfo.dirty then
+            local now = GetTime and GetTime() or 0
+            if creatureInfo.head > #creatureInfo.queue or (now - creatureInfo.lastNotify) >= 0.35 then
+                creatureInfo.dirty = false
+                creatureInfo.lastNotify = now
+                for _, callback in ipairs(creatureInfo.listeners) do callback() end
+            end
+        end
+
+        if creatureInfo.head <= #creatureInfo.queue then ScheduleQueue() end
     end)
 end
 
@@ -55,17 +134,22 @@ function TrainerLocations.GetCreatureInfo(npcID)
     if IsInInstance() then return nil end
     local tries = creatureInfo.tries[npcID] or 0
     if tries >= 3 then return nil end
-    creatureInfo.tries[npcID] = tries + 1
-    local name, subtitle = ReadCreatureTooltip(npcID)
-    if not IsUsableText(name) then
-        ScheduleRetry()
-        return nil
+    if not C_Timer then
+        creatureInfo.tries[npcID] = tries + 1
+        local name, subtitle = ReadCreatureTooltip(npcID)
+        if not IsUsableText(name) then return nil end
+        if not IsUsableText(subtitle) or subtitle:find("%d") then subtitle = nil end
+        cached = {name = name, subtitle = subtitle}
+        creatureInfo.cache[npcID] = cached
+        return cached
     end
 
-    if not IsUsableText(subtitle) or subtitle:find("%d") then subtitle = nil end
-    cached = {name = name, subtitle = subtitle}
-    creatureInfo.cache[npcID] = cached
-    return cached
+    if not creatureInfo.queued[npcID] and not creatureInfo.retryQueued[npcID] then
+        creatureInfo.queued[npcID] = true
+        table.insert(creatureInfo.queue, npcID)
+        ScheduleQueue()
+    end
+    return nil
 end
 
 local function GetLocalized(values)
@@ -74,14 +158,14 @@ local function GetLocalized(values)
     return values[locale] or values.enUS
 end
 
-local function GetTrainerName(trainer)
-    local info = TrainerLocations.GetCreatureInfo(trainer.npcID)
+local function GetTrainerName(trainer, cachedOnly)
+    local info = cachedOnly and TrainerLocations.GetCachedCreatureInfo(trainer.npcID) or TrainerLocations.GetCreatureInfo(trainer.npcID)
     return info and info.name or GetLocalized(trainer.names)
 end
 
-local function GetTrainerTag(trainer)
+local function GetTrainerTag(trainer, cachedOnly)
     if not trainer.tags then return nil end
-    local info = TrainerLocations.GetCreatureInfo(trainer.npcID)
+    local info = cachedOnly and TrainerLocations.GetCachedCreatureInfo(trainer.npcID) or TrainerLocations.GetCreatureInfo(trainer.npcID)
     return info and info.subtitle or GetLocalized(trainer.tags)
 end
 
@@ -108,17 +192,17 @@ local function GetContinent(uiMapID)
     return result
 end
 
-local function BuildEntry(trainer, location, petLabel)
+local function BuildEntry(trainer, location, petLabel, cachedOnly)
     local continent = GetContinent(location.uiMapID)
     return {
         continentID = continent.id,
         continentName = continent.name,
         displayID = trainer.displayID,
         location = location,
-        name = GetTrainerName(trainer),
+        name = GetTrainerName(trainer, cachedOnly),
         npcID = trainer.npcID,
         starter = trainer.starter,
-        petLabel = petLabel or GetTrainerTag(trainer),
+        petLabel = petLabel or GetTrainerTag(trainer, cachedOnly),
         rank = trainer.rank,
         zoneName = C_Map.GetAreaInfo(location.areaID) or tostring(location.areaID),
     }
@@ -134,7 +218,7 @@ function TrainerLocations.AddEntries(entries, trainers, searchText, usableOnly, 
         local isVisible = usableOnly or not hideStarter or not trainer.starter
         if matchesFaction and isVisible and (not usableOnly or isUsable) then
             for _, location in ipairs(trainer.locations) do
-                local entry = BuildEntry(trainer, location, petLabel)
+                local entry = BuildEntry(trainer, location, petLabel, usableOnly)
                 local searchable = (entry.name .. " " .. entry.zoneName .. " " .. entry.continentName .. " " .. (entry.petLabel or "")):lower()
                 if searchText == "" or searchable:find(searchText, 1, true) then table.insert(entries, entry) end
             end

@@ -170,12 +170,21 @@ function TrainerSpells:IsSaneSpellID(spellID)
     return type(spellID) == "number" and spellID > 0 and spellID < 2000000
 end
 
+TrainerSpells.SpellInfoCache = {}
 function TrainerSpells:GetSpellInfo(spell)
     if GetSpellInfo then return GetSpellInfo(spell) end
     if spell == nil or not C_Spell or not C_Spell.GetSpellInfo then return nil end
+    if type(spell) == "number" then
+        local cached = self.SpellInfoCache[spell]
+        if cached then return cached[1], cached[2], cached[3], cached[4], cached[5], cached[6], cached[7] end
+    end
+
     local info = C_Spell.GetSpellInfo(spell)
     if not info then return nil end
     local subText = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(info.spellID)
+    if type(spell) == "number" and info.name and info.name ~= "" then
+        self.SpellInfoCache[spell] = {info.name, subText, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID}
+    end
     return info.name, subText, info.iconID, info.castTime, info.minRange, info.maxRange, info.spellID
 end
 

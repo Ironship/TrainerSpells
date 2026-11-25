@@ -631,8 +631,227 @@ function TrainerSpells.IsGamepadNavActive()
     return SmartNavigation ~= nil and SmartNavigation.enabled == true
 end
 
+function TrainerSpells:CancelScrollBoxLoad(scrollBox)
+    local state = scrollBox and scrollBox.tsLoadState
+    if not state then return end
+    state.token = state.token + 1
+    state.loading = false
+end
+
+function TrainerSpells:SetScrollBoxItems(scrollBox, items, options)
+    if not scrollBox then return end
+    options = options or {}
+    local owner = options.owner
+    local detached = options.detached
+    local immediate = options.immediate
+    local rowHeight = math.max(10, options.rowHeight or self.RowHeight or 16)
+    local state = scrollBox.tsLoadState
+    if not state then
+        state = {token = 0, warmed = 0}
+        scrollBox.tsLoadState = state
+    end
+
+    state.token = state.token + 1
+    local token = state.token
+    local total = #items
+    local function RunWrapped(fn)
+        if detached and owner then
+            TrainerSpells.RunDetached(owner, fn)
+        else
+            fn()
+        end
+    end
+
+    local boxHeight = scrollBox.GetHeight and scrollBox:GetHeight() or 0
+    if boxHeight <= 0 then boxHeight = 480 end
+    local visibleRows = math.ceil(boxHeight / rowHeight) + 3
+    local neededRows = math.min(total, visibleRows)
+    if not C_Timer or total <= 6 or state.warmed >= neededRows then
+        state.loading = false
+        state.incomplete = nil
+        RunWrapped(function()
+            scrollBox:SetDataProvider(CreateDataProvider(items), ScrollBoxConstants.RetainScrollPosition)
+            if immediate and ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
+        end)
+        if neededRows > state.warmed then state.warmed = neededRows end
+        return
+    end
+
+    local function InsertBatch(dp, batch)
+        if dp.InsertTable then
+            dp:InsertTable(batch)
+        else
+            for i = 1, #batch do dp:Insert(batch[i]) end
+        end
+    end
+
+    local firstCount = math.min(total, math.max(4, state.warmed + 4))
+    local firstItems = {}
+    for i = 1, firstCount do firstItems[i] = items[i] end
+    local dp = CreateDataProvider(firstItems)
+    state.loading = true
+    state.incomplete = nil
+    RunWrapped(function()
+        scrollBox:SetDataProvider(dp, ScrollBoxConstants.RetainScrollPosition)
+    end)
+    if firstCount > state.warmed then state.warmed = firstCount end
+    local index = firstCount + 1
+    if index > total then
+        state.loading = false
+        return
+    end
+
+    local function Step()
+        if state.token ~= token then return end
+        if owner and owner.IsShown and not owner:IsShown() then
+            state.loading = false
+            state.incomplete = true
+            return
+        end
+
+        local startTime = debugprofilestop and debugprofilestop() or nil
+        RunWrapped(function()
+            if index <= neededRows then
+                local limit = math.min(neededRows, index + 3)
+                local batch = {}
+                for i = index, limit do batch[#batch + 1] = items[i] end
+                index = limit + 1
+                InsertBatch(dp, batch)
+                if (index - 1) > state.warmed then state.warmed = index - 1 end
+                if startTime and index <= neededRows and (debugprofilestop() - startTime) < 1.2 then
+                    local extraLimit = math.min(neededRows, index + 1)
+                    local extra = {}
+                    for i = index, extraLimit do extra[#extra + 1] = items[i] end
+                    index = extraLimit + 1
+                    InsertBatch(dp, extra)
+                    if (index - 1) > state.warmed then state.warmed = index - 1 end
+                end
+            else
+                local limit = math.min(total, index + 99)
+                local batch = {}
+                for i = index, limit do batch[#batch + 1] = items[i] end
+                index = limit + 1
+                InsertBatch(dp, batch)
+            end
+
+            if immediate and ScrollBoxConstants.UpdateImmediately and index > total then
+                scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
+            end
+        end)
+
+        if index <= total then
+            C_Timer.After(0, Step)
+        else
+            state.loading = false
+        end
+    end
+
+    C_Timer.After(0, Step)
+end
+
+function TrainerSpells:CancelPrewarm(frame)
+    local prewarm = frame and frame.tsPrewarm
+    if prewarm and prewarm.finish then prewarm.finish(true) end
+end
+
+function TrainerSpells:StartIncrementalPrewarm(frame, scrollBox, config)
+    if not frame or not scrollBox or not config then return end
+    if not (TrainerSpells.IsGamepadNavActive() or (TrainerSpells.IsGamepadUIEnabled and TrainerSpells.IsGamepadUIEnabled())) then return end
+    if frame:IsShown() or frame.compendiumHost or (frame.tsPrewarm and frame.tsPrewarm.active) then return end
+    local targetHeight = math.max(200, math.min(900, config.getHeight and config.getHeight() or 520))
+    local rowHeight = math.max(12, config.getRowHeight and config.getRowHeight() or 16)
+    local targetRows = math.min(48, math.ceil(targetHeight / rowHeight) + 4)
+    local loadState = scrollBox.tsLoadState
+    if not loadState then
+        loadState = {token = 0, warmed = 0}
+        scrollBox.tsLoadState = loadState
+    end
+    if loadState.warmed >= targetRows then return end
+
+    local dp = CreateDataProvider()
+    local prewarm = {
+        active = true,
+        started = false,
+        created = 0,
+        target = targetRows,
+        dp = dp,
+        savedAlpha = frame:GetAlpha(),
+    }
+
+    local function Finish(aborted)
+        if not prewarm.active then return end
+        prewarm.active = false
+        frame.tsPrewarm = nil
+        TrainerSpells.RunDetached(frame, function()
+            frame.prewarmingRows = true
+            if not aborted then frame:Hide() end
+            frame:SetAlpha(prewarm.savedAlpha or 1)
+            if prewarm.started and (not scrollBox.GetDataProvider or scrollBox:GetDataProvider() == dp) then
+                scrollBox:RemoveDataProvider()
+            end
+            if config.restore then config.restore() end
+            frame.prewarmingRows = nil
+        end)
+    end
+
+    prewarm.finish = Finish
+    frame.tsPrewarm = prewarm
+
+    local function Step()
+        if not prewarm.active then return end
+        if frame:IsShown() or frame.compendiumHost then
+            Finish(true)
+            return
+        end
+
+        TrainerSpells.RunDetached(frame, function()
+            frame.prewarmingRows = true
+            if not prewarm.started then
+                prewarm.started = true
+                if config.prepare then config.prepare() end
+            end
+
+            frame:SetAlpha(0)
+            frame:Show()
+            if prewarm.created == 0 then scrollBox:SetDataProvider(dp) end
+            local count = math.min(4, prewarm.target - prewarm.created)
+            local batch = {}
+            for i = 1, count do
+                batch[i] = {entry = {name = ""}}
+            end
+
+            if dp.InsertTable then
+                dp:InsertTable(batch)
+            else
+                for i = 1, #batch do dp:Insert(batch[i]) end
+            end
+
+            prewarm.created = prewarm.created + count
+            if prewarm.created > loadState.warmed then loadState.warmed = prewarm.created end
+            if ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
+            frame:Hide()
+            frame:SetAlpha(prewarm.savedAlpha or 1)
+            frame.prewarmingRows = nil
+        end)
+
+        if prewarm.created < prewarm.target and C_Timer then
+            C_Timer.After(0, Step)
+        else
+            Finish(false)
+        end
+    end
+
+    if C_Timer then
+        C_Timer.After(0, Step)
+    else
+        Step()
+    end
+end
+
 function TrainerSpells:PrepareGamepadNavigation(root, gamepad)
     if gamepad == nil then gamepad = TrainerSpells.IsGamepadNavActive() end
+    if not gamepad and not root.tsGamepadDirty then return end
+    root.tsGamepadDirty = gamepad and true or nil
     if root:IsObjectType("Button") or root:IsObjectType("EditBox") or root:GetScript("OnMouseUp") or root:GetScript("OnMouseDown") then root.tsGamepadClick = true end
     local onEnter, onLeave = root:GetScript("OnEnter"), root:GetScript("OnLeave")
     if gamepad then
@@ -769,11 +988,10 @@ function TrainerSpells:ApplyRowStripe(rowFrame, elementData)
     rowFrame.tsStripe:Show()
 end
 
-function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
-    rowFrame.tsFocusStripped, rowFrame.tsOnEnter, rowFrame.tsOnLeave = nil, nil, nil
-    local Colors = TrainerSpells.UIColors
-    if not rowFrame.icon then
-        local categoryBackground = TrainerSpells.CreateDetachedFrame("Frame", rowFrame, "BackdropTemplate")
+function TrainerSpells.GetRowCategoryBackground(rowFrame)
+    local categoryBackground = rowFrame.categoryBackground
+    if not categoryBackground then
+        categoryBackground = TrainerSpells.CreateDetachedFrame("Frame", rowFrame, "BackdropTemplate")
         categoryBackground:SetAllPoints()
         categoryBackground:SetFrameLevel(math.max(0, rowFrame:GetFrameLevel() - 1))
         categoryBackground:SetBackdrop({
@@ -793,6 +1011,15 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         categoryBackground:EnableMouse(false)
         categoryBackground:Hide()
         rowFrame.categoryBackground = categoryBackground
+    end
+
+    return categoryBackground
+end
+
+function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
+    rowFrame.tsFocusStripped, rowFrame.tsOnEnter, rowFrame.tsOnLeave = nil, nil, nil
+    local Colors = TrainerSpells.UIColors
+    if not rowFrame.icon then
         GetRowHitButton(rowFrame)
         GetRowCollapseButton(rowFrame)
         GetRowLocationButton(rowFrame, 3)
@@ -845,7 +1072,7 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         end
     end
 
-    rowFrame.categoryBackground:Hide()
+    if rowFrame.categoryBackground then rowFrame.categoryBackground:Hide() end
     icon:Show()
     icon:SetTexture(nil)
     nameFS:ClearAllPoints()
@@ -865,21 +1092,22 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
     sourceFS:Hide()
     sourceFS:SetText("")
     if elementData.isHeader then
+        local categoryBackground = TrainerSpells.GetRowCategoryBackground(rowFrame)
         local categoryInset = math.max(0, ((rowFrame:GetHeight() or TrainerSpells.HeaderHeight) - TrainerSpells.HeaderHeight) / 2)
-        rowFrame.categoryBackground:ClearAllPoints()
-        rowFrame.categoryBackground:SetPoint("TOPLEFT", rowFrame, "TOPLEFT", (elementData.headerDepth or 0) * 16, -categoryInset)
-        rowFrame.categoryBackground:SetPoint("BOTTOMRIGHT", rowFrame, "BOTTOMRIGHT", 0, categoryInset)
-        rowFrame.categoryBackground:Show()
+        categoryBackground:ClearAllPoints()
+        categoryBackground:SetPoint("TOPLEFT", rowFrame, "TOPLEFT", (elementData.headerDepth or 0) * 16, -categoryInset)
+        categoryBackground:SetPoint("BOTTOMRIGHT", rowFrame, "BOTTOMRIGHT", 0, categoryInset)
+        categoryBackground:Show()
         icon:Hide()
         SetFontSize(nameFS, fontSize)
         local textInset = elementData.groupKey and (COLLAPSE_BUTTON_SIZE + 6) or 4
-        local rightAnchor, rightPoint, rightGap = rowFrame.categoryBackground, "RIGHT", -4
+        local rightAnchor, rightPoint, rightGap = categoryBackground, "RIGHT", -4
         if elementData.totalCost ~= nil then
             local canAfford = elementData.totalCost == 0 or (GetMoney() or 0) >= elementData.totalCost
             local costColor = canAfford and "|cffffffff" or "|cffff3333"
             SetFontSize(costFS, fontSize)
             costFS:ClearAllPoints()
-            costFS:SetPoint("RIGHT", rowFrame.categoryBackground, "RIGHT", -4, 0)
+            costFS:SetPoint("RIGHT", categoryBackground, "RIGHT", -4, 0)
             costFS:SetText(costColor .. TrainerSpells.Pricing.Text(elementData.baseCost, elementData.totalCost, elementData.baseCostEstimated, costColor) .. "|r")
             costFS:SetWidth(math.ceil(costFS:GetUnboundedStringWidth()) + 2)
             costFS:Show()
@@ -900,8 +1128,8 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
         end
 
         nameFS:ClearAllPoints()
-        nameFS:SetPoint("TOPLEFT", rowFrame.categoryBackground, "TOPLEFT", textInset, 0)
-        nameFS:SetPoint("BOTTOMLEFT", rowFrame.categoryBackground, "BOTTOMLEFT", textInset, 0)
+        nameFS:SetPoint("TOPLEFT", categoryBackground, "TOPLEFT", textInset, 0)
+        nameFS:SetPoint("BOTTOMLEFT", categoryBackground, "BOTTOMLEFT", textInset, 0)
         nameFS:SetPoint("RIGHT", rightAnchor, rightPoint, rightGap, 0)
         nameFS:SetJustifyH("LEFT")
         nameFS:SetJustifyV("MIDDLE")

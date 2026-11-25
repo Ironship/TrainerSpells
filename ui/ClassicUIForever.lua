@@ -51,7 +51,6 @@ function integration:Open(group, mode)
     group.panel:SetFrameStrata("DIALOG")
     group.panel:SetFrameLevel(self:GetLevel(self.book.Clicks or self.book) + 10)
     group.panel:Show()
-    group.view:Refresh()
     self:Layout()
     self:BlockNativeMouse()
 end

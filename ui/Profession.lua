@@ -753,11 +753,40 @@ function TrainerSpells:BuildProfessionViewItems(viewMode, searchText, profession
 end
 
 function TrainerSpells_ProfessionRefresh()
-    local key, name, rank = professionPicker.GetActive()
-    professionScrollBox:SetDataProvider(CreateDataProvider(TrainerSpells:BuildProfessionViewItems(professionViewMode, TrainerSpells_ProfessionSearchText, key, name, rank)), ScrollBoxConstants.RetainScrollPosition)
-    if TrainerSpells.CompendiumProfessionView then TrainerSpells.CompendiumProfessionView:Refresh() end
-    professionPicker.UpdateText()
+    professionFrame.tsRefreshQueued = nil
+    if professionFrame:IsShown() and not professionFrame.prewarmingRows then
+        local key, name, rank = professionPicker.GetActive()
+        TrainerSpells:SetScrollBoxItems(professionScrollBox, TrainerSpells:BuildProfessionViewItems(professionViewMode, TrainerSpells_ProfessionSearchText, key, name, rank), {
+            owner = professionFrame,
+            detached = not professionFrame.compendiumHost,
+            rowHeight = TrainerSpells.ProfessionRowHeight,
+        })
+        professionPicker.UpdateText()
+    end
+
+    if TrainerSpells.CompendiumProfessionView and TrainerSpells.CompendiumProfessionView.host and TrainerSpells.CompendiumProfessionView.host:IsShown() then
+        TrainerSpells.CompendiumProfessionView:Refresh()
+    end
 end
+
+function TrainerSpells:ScheduleProfessionRefresh()
+    if not C_Timer then
+        TrainerSpells_ProfessionRefresh()
+        return
+    end
+
+    if professionFrame.tsRefreshQueued then return end
+    professionFrame.tsRefreshQueued = true
+    C_Timer.After(0, function()
+        professionFrame.tsRefreshQueued = nil
+        if professionFrame:IsShown() and not professionFrame.prewarmingRows then TrainerSpells_ProfessionRefresh() end
+    end)
+end
+
+professionFrame:HookScript("OnHide", function(self)
+    if self.prewarmingRows then return end
+    TrainerSpells:CancelScrollBoxLoad(professionScrollBox)
+end)
 
 local PositionProfessionFrame
 local professionSubTabs = {}
@@ -863,6 +892,7 @@ function professionSubTabs.InstallGamepadFocus()
             gamepadState = gamepad
             TrainerSpells:PrepareGamepadNavigation(professionFrame, gamepad)
             if professionPicker.dropdown and professionPicker.dropdown:IsShown() then professionPicker.ApplyInputMode() end
+            if gamepad and not professionFrame:IsShown() then professionSubTabs.PrewarmRows() end
             TrainerSpells_ProfessionRefresh()
         end
 
@@ -880,30 +910,24 @@ end
 professionSubTabs.InstallGamepadFocus()
 function professionSubTabs.PrewarmRows()
     if professionFrame.compendiumHost or professionFrame:IsShown() then return end
-    TrainerSpells.RunDetached(professionFrame, function()
-        local rowHeight = TrainerSpells.ProfessionRowHeight
-        TrainerSpells.ProfessionRowHeight = TrainerSpells.MinRowHeight
-        professionScrollBox:ClearAllPoints()
-        professionScrollBox:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
-        professionScrollBox:SetSize(420, 1200)
-        local items = {}
-        for index = 1, math.ceil(1200 / TrainerSpells.MinRowHeight) + 2 do
-            items[index] = {
-                entry = {
-                    name = ""
-                }
-            }
-        end
-
-        professionFrame:Show()
-        professionScrollBox:SetDataProvider(CreateDataProvider(items))
-        professionFrame:Hide()
-        professionScrollBox:RemoveDataProvider()
-        TrainerSpells.ProfessionRowHeight = rowHeight
-        professionScrollBox:ClearAllPoints()
-        professionScrollBox:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", 8, -4)
-        professionScrollBox:SetPoint("BOTTOMRIGHT", professionFrame, "BOTTOMRIGHT", -26, 12)
-    end)
+    TrainerSpells:StartIncrementalPrewarm(professionFrame, professionScrollBox, {
+        getHeight = function()
+            local h = ProfessionsFrame and ProfessionsFrame:GetHeight()
+            return (h and h > 0) and h or 560
+        end,
+        getRowHeight = function() return TrainerSpells.ProfessionRowHeight end,
+        prepare = function()
+            local h = ProfessionsFrame and ProfessionsFrame:GetHeight()
+            professionScrollBox:ClearAllPoints()
+            professionScrollBox:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
+            professionScrollBox:SetSize(420, (h and h > 0) and h or 560)
+        end,
+        restore = function()
+            professionScrollBox:ClearAllPoints()
+            professionScrollBox:SetPoint("TOPLEFT", professionFrame, "TOPLEFT", 8, -4)
+            professionScrollBox:SetPoint("BOTTOMRIGHT", professionFrame, "BOTTOMRIGHT", -26, 12)
+        end,
+    })
 end
 
 function TrainerSpells:PositionCompendiumProfessions()
@@ -1638,6 +1662,7 @@ local function OpenProfessionsFrameView(mode)
         professionListBg:Show()
     end
 
+    TrainerSpells:CancelPrewarm(professionFrame)
     PositionProfessionFrame()
     professionFrame:Show()
     for _, tab in pairs(professionsModeTabs) do
@@ -1662,7 +1687,7 @@ local function OpenProfessionsFrameView(mode)
     end
 
     professionSubTabs.Update()
-    TrainerSpells_ProfessionRefresh()
+    TrainerSpells:ScheduleProfessionRefresh()
 end
 
 local function IsTradeSkillAddonEnabled()
@@ -1951,7 +1976,9 @@ tradeSkillWatcher:SetScript("OnEvent", function(_, event, itemID, success)
         if success and itemID and professionPicker.unlockBooksInBags[itemID] ~= nil then TrainerSpells_ProfessionRefresh() end
         return
     elseif event == "SKILL_LINES_CHANGED" or event == "PLAYER_LEVEL_UP" then
-        TrainerSpells_ProfessionRefresh()
+        if professionFrame:IsShown() or (TrainerSpells.CompendiumProfessionView and TrainerSpells.CompendiumProfessionView.host and TrainerSpells.CompendiumProfessionView.host:IsShown()) then
+            TrainerSpells_ProfessionRefresh()
+        end
         return
     end
     EnsureTradeSkillHooksInstalled()
@@ -2014,6 +2041,6 @@ function TrainerSpells:CreateCompendiumProfessions(host)
         view.title:SetPoint("BOTTOMRIGHT", host, "TOPRIGHT", -190, 17)
         view.dropdown:SetupMenu(function(_, menu) professionPicker.PopulateCompendiumMenu(view, menu) end)
     end
-    host:SetScript("OnShow", function() view:Refresh() end)
+    host:SetScript("OnShow", function() view:ScheduleRefresh() end)
     return view
 end

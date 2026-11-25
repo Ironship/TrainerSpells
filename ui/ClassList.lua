@@ -104,12 +104,43 @@ function TrainerSpells:BuildClassViewItems(viewMode, searchText)
 end
 
 function TrainerSpells_Refresh()
-    TrainerSpells.RunDetached(classFrame, function()
-        scrollBox:SetDataProvider(CreateDataProvider(TrainerSpells:BuildClassViewItems(TrainerSpells.ClassView, TrainerSpells_SearchText)), ScrollBoxConstants.RetainScrollPosition)
-        if ScrollBoxConstants.UpdateImmediately then scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately) end
-    end)
+    classFrame.tsRefreshQueued = nil
+    if classFrame:IsShown() and not classFrame.prewarmingRows then
+        TrainerSpells:SetScrollBoxItems(scrollBox, TrainerSpells:BuildClassViewItems(TrainerSpells.ClassView, TrainerSpells_SearchText), {
+            owner = classFrame,
+            detached = true,
+            rowHeight = TrainerSpells.RowHeight,
+            immediate = true,
+        })
+    end
 
-    if TrainerSpells.CompendiumClassView then TrainerSpells.CompendiumClassView:Refresh() end
+    if TrainerSpells.CompendiumClassView and TrainerSpells.CompendiumClassView.host and TrainerSpells.CompendiumClassView.host:IsShown() then
+        TrainerSpells.CompendiumClassView:Refresh()
+    end
+end
+
+function TrainerSpells:ScheduleClassRefresh(syncPets)
+    if syncPets then classFrame.tsPendingPetSync = true end
+    if not C_Timer then
+        if classFrame.tsPendingPetSync then
+            classFrame.tsPendingPetSync = nil
+            if TrainerSpells_SyncPetSpells then TrainerSpells_SyncPetSpells() end
+        end
+        TrainerSpells_Refresh()
+        return
+    end
+
+    if classFrame.tsRefreshQueued then return end
+    classFrame.tsRefreshQueued = true
+    C_Timer.After(0, function()
+        classFrame.tsRefreshQueued = nil
+        if not classFrame:IsShown() or classFrame.prewarmingRows then return end
+        if classFrame.tsPendingPetSync then
+            classFrame.tsPendingPetSync = nil
+            if TrainerSpells_SyncPetSpells then TrainerSpells_SyncPetSpells() end
+        end
+        TrainerSpells_Refresh()
+    end)
 end
 
 function TrainerSpells:HasPetClassData(classToken)
@@ -144,13 +175,18 @@ function TrainerSpells:SetClassView(view)
     TrainerSpells.ClassView = view
     if TrainerSpells_Character then TrainerSpells_Character.classView = view end
     if TrainerSpells.UpdateClassViewTabs then TrainerSpells:UpdateClassViewTabs() end
-    if TrainerSpells_Refresh then TrainerSpells_Refresh() end
+    if classFrame:IsShown() and TrainerSpells_Refresh then TrainerSpells_Refresh() end
 end
 
 classFrame:SetScript("OnShow", function(self)
     if self.prewarmingRows then return end
-    if TrainerSpells_SyncPetSpells then TrainerSpells_SyncPetSpells() end
-    TrainerSpells_Refresh()
+    TrainerSpells:CancelPrewarm(self)
+    TrainerSpells:ScheduleClassRefresh(true)
+end)
+
+classFrame:SetScript("OnHide", function(self)
+    if self.prewarmingRows then return end
+    TrainerSpells:CancelScrollBoxLoad(scrollBox)
 end)
 
 classFrame:RegisterEvent("PLAYER_LEVEL_UP")
