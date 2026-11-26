@@ -312,6 +312,13 @@ local function FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLeve
         spoilerLimit = TrainerSpells_Character and TrainerSpells_Character.spoilerFree and selectedLevel + 2
     end
     local rankIgnoreStates = {}
+    local knownRankless = {}
+    if not professionKey then
+        for _, entry in ipairs(allEntries) do
+            if entry.directlyKnown and not entry.hasRealRank then knownRankless[entry.name] = true end
+        end
+    end
+
     for _, entry in ipairs(allEntries) do
         local isIgnored
         if not professionKey then
@@ -340,7 +347,7 @@ local function FinalizeGroups(allEntries, knownMaxRank, searchText, selectedLeve
                 table.insert(ignored, entry)
             else
                 local maxKnown = knownMaxRank[entry.name] or 0
-                local isKnown = entry.directlyKnown or (entry.hasRealRank and entry.rankNum <= maxKnown)
+                local isKnown = entry.directlyKnown or (entry.hasRealRank and entry.rankNum <= maxKnown) or (not entry.hasRealRank and knownRankless[entry.name])
                 if isKnown then
                     table.insert(known, entry)
                 else
