@@ -397,6 +397,7 @@ end
 
 function TrainerSpells:OpenWorldMapAt(uiMapID)
     if not WorldMapFrame then return end
+    if ProfessionsFrame and ProfessionsFrame:IsShown() then return end
     if WorldMapFrame.HandleUserActionOpenSelf then
         if C_Map.OpenWorldMap then
             C_Map.OpenWorldMap(uiMapID)

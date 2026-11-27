@@ -1193,6 +1193,10 @@ function TrainerSpells.CreateBeastControls(addon, parent)
     nearest:SetScript("OnLeave", GameTooltip_Hide)
     TrainerLocations.AddResolveListener(function()
         if controls:IsVisible() then TrainerSpells_Refresh() end
+        local ability = Beasts.abilityFrame
+        if ability and ability:IsShown() and ability.rank then Beasts.ShowAbility(ability.abilityKey, ability.rank, true) end
+        local detail = Beasts.detailFrame
+        if detail and detail:IsShown() and detail.beast then detail.title:SetText(Beasts.FavoritePrefix(Beasts.IsFavoriteBeast(detail.beast.id)) .. Beasts.BeastName(detail.beast)) end
     end)
     controls:SetScript("OnShow", function()
         tameable:SetChecked(TrainerSpells_Character.beastTameableOnly and true or false)
