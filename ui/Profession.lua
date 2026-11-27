@@ -903,7 +903,7 @@ end
 
 function professionSubTabs.Create()
     if professionSubTabs.bar then return end
-    local bar = CreateFrame("Frame", "TrainerSpellsProfessionSubTabs", professionFrame, "TabSystemTemplate")
+    local bar = TrainerSpells:CreateIconTabBar("TrainerSpellsProfessionSubTabs", professionFrame)
     professionSubTabs.bar = bar
     bar:SetTabSelectedCallback(function(tabID)
         local view = PROFESSION_ALL_VIEWS[tabID]
@@ -1661,8 +1661,21 @@ local function RestoreProfessionsFramePage()
     end
 end
 
+function professionSubTabs.SetNativeSystemTabsVisual(showSelection)
+    if professionsFrameUsesSideTabs or not (ProfessionsFrame and ProfessionsFrame.TabSystem and ProfessionsFrame.TabSystem.tabs) then return end
+    for _, tab in ipairs(ProfessionsFrame.TabSystem.tabs) do
+        local isSelected = showSelection and tab.isSelected and true or false
+        local active = tab.squareMode and {"SquareBackgroundActive", "SquareBackgroundActiveGlow"} or {"LeftActive", "MiddleActive", "RightActive"}
+        local inactive = tab.squareMode and {"SquareBackground"} or {"Left", "Middle", "Right"}
+        for _, key in ipairs(active) do if tab[key] then tab[key]:SetShown(isSelected) end end
+        for _, key in ipairs(inactive) do if tab[key] then tab[key]:SetShown(not isSelected) end end
+        tab:SetEnabled(not isSelected and not (tab.IsForceDisabled and tab:IsForceDisabled()))
+    end
+end
+
 local function CloseProfessionsFrameView()
     if professionFrame.compendiumHost then return end
+    local wasOpen = professionsModeActive
     RestoreProfessionsFramePage()
     professionsClosePending = false
     professionsModeActive = false
@@ -1672,6 +1685,7 @@ local function CloseProfessionsFrameView()
         SetProfessionsModeTabSelected(tab, false)
     end
     UpdateProfessionsViewTabSelection()
+    if wasOpen then professionSubTabs.SetNativeSystemTabsVisual(true) end
 end
 
 function professionSubTabs.IsForeignControl(frame)
@@ -1748,8 +1762,8 @@ local function OpenProfessionsFrameView(mode)
         for _, tab in ipairs(ProfessionsFrame.rightProfessionTabs) do
             tab:SetChecked(false)
         end
-    elseif ProfessionsFrame.TabSystem.SetTabVisuallySelected then
-        ProfessionsFrame.TabSystem:SetTabVisuallySelected(0)
+    else
+        professionSubTabs.SetNativeSystemTabsVisual(false)
     end
 
     professionPicker.SetHeaderActive(true)
@@ -1821,11 +1835,8 @@ end
 
 TrainerSpells:OnTabSettingsChanged(ApplyProfessionTabSettings)
 local function CreateProfessionsFrameSystemTab(tabID, text, icon, mode)
-    local tab = CreateFrame("Button", nil, professionsModeTabContainer, "TabSystemButtonTemplate")
-    tab.GetTabSystem = function() return ProfessionsFrame.TabSystem end
-    tab:Init(tabID, nil, icon)
-    tab:SetTooltipText(text)
-    tab:SetScript("OnClick", function(self) if not self.combatLocked then OpenProfessionsFrameView(mode) end end)
+    local tab = TrainerSpells:CreateIconTabButton(professionsModeTabContainer, icon, text, function(self) if not self.combatLocked then OpenProfessionsFrameView(mode) end end)
+    tab.tabID = tabID
     tab:Show()
     if mode then professionsViewTabs[mode] = tab else professionsModeTabs.addon = tab end
     return tab

@@ -158,6 +158,154 @@ local function GetRowCollapseButton(rowFrame)
     return button
 end
 
+function TrainerSpells.HasProtectedPanelShown()
+    return ((ProfessionsFrame and ProfessionsFrame:IsShown()) or (PlayerSpellsFrame and PlayerSpellsFrame:IsShown())) and true or false
+end
+
+function TrainerSpells:CreateIconTabButton(parent, icon, tooltipText, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(44, 32)
+    if button.SetMotionScriptsWhileDisabled then button:SetMotionScriptsWhileDisabled(true) end
+    local iconTex = button:CreateTexture(nil, "ARTWORK")
+    iconTex:SetSize(36, 35)
+    iconTex:SetPoint("BOTTOM")
+    iconTex:SetPoint("CENTER", button, "CENTER", 0, 0)
+    if icon then iconTex:SetTexture(icon) end
+    button.Icon = iconTex
+    if button.CreateMaskTexture and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("SquareMask") then
+        local mask = button:CreateMaskTexture()
+        mask:SetAtlas("SquareMask")
+        mask:SetPoint("TOPLEFT", iconTex, "TOPLEFT", 0, -2)
+        mask:SetPoint("BOTTOMRIGHT", iconTex, "BOTTOMRIGHT", -2, 0)
+        iconTex:AddMaskTexture(mask)
+        button.IconMask = mask
+    end
+    local useSquare = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("spellbook-Tab-Frame-C60")
+    if useSquare then
+        button.squareMode = true
+        button.SquareBackground = button:CreateTexture(nil, "ARTWORK", nil, 1)
+        button.SquareBackground:SetPoint("BOTTOM", 0, 1)
+        button.SquareBackground:SetAtlas("spellbook-Tab-Frame-C60", true)
+        button.SquareBackgroundActive = button:CreateTexture(nil, "ARTWORK", nil, 1)
+        button.SquareBackgroundActive:SetPoint("BOTTOM", 0, 1)
+        button.SquareBackgroundActive:SetAtlas("spellbook-Tab-Frame-Glow-C60", true)
+        button.SquareBackgroundActiveGlow = button:CreateTexture(nil, "ARTWORK", nil, 1)
+        button.SquareBackgroundActiveGlow:SetPoint("BOTTOM", 0, 0)
+        button.SquareBackgroundActiveGlow:SetAtlas("spellbook-Tab-Frame-glow-gradient-C60", true)
+    else
+        button.bgInactive = button:CreateTexture(nil, "BACKGROUND")
+        button.bgInactive:SetAllPoints()
+        button.bgInactive:SetColorTexture(0.08, 0.08, 0.08, 0.85)
+        button.bgActive = button:CreateTexture(nil, "BACKGROUND")
+        button.bgActive:SetAllPoints()
+        button.bgActive:SetColorTexture(0.22, 0.19, 0.12, 0.95)
+        button.bgActiveGlow = button:CreateTexture(nil, "OVERLAY")
+        button.bgActiveGlow:SetAllPoints()
+        button.bgActiveGlow:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+        button.bgActiveGlow:SetBlendMode("ADD")
+    end
+    button.tooltipText = tooltipText
+    function button:SetTabSelected(isSelected)
+        self.isSelected = isSelected and true or false
+        if self.squareMode then
+            self.SquareBackground:SetShown(not self.isSelected)
+            self.SquareBackgroundActive:SetShown(self.isSelected)
+            self.SquareBackgroundActiveGlow:SetShown(self.isSelected)
+        else
+            self.bgInactive:SetShown(not self.isSelected)
+            self.bgActive:SetShown(self.isSelected)
+            self.bgActiveGlow:SetShown(self.isSelected)
+        end
+        if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+    end
+    function button:IsSelected()
+        return not not self.isSelected
+    end
+    function button:SetTooltipText(text)
+        self.tooltipText = text
+    end
+    function button:GetTabID()
+        return self.tabID
+    end
+    button:SetScript("OnEnter", function(sel)
+        if not sel.tooltipText then return end
+        GameTooltip:SetOwner(sel, "ANCHOR_RIGHT", -12, -6)
+        if GameTooltip_AddNormalLine then
+            GameTooltip_AddNormalLine(GameTooltip, sel.tooltipText)
+        else
+            GameTooltip:SetText(sel.tooltipText)
+        end
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", GameTooltip_Hide)
+    if onClick then button:SetScript("OnClick", onClick) end
+    button:SetTabSelected(false)
+    return button
+end
+
+function TrainerSpells:CreateIconTabBar(name, parent)
+    local bar = CreateFrame("Frame", name, parent)
+    bar:SetSize(1, 32)
+    bar.tabs = {}
+    bar.spacing = 1
+    function bar:SetTabSelectedCallback(callback)
+        self.tabSelectedCallback = callback
+    end
+    function bar:Layout()
+        local last, width = nil, 0
+        for _, tab in ipairs(self.tabs) do
+            tab:ClearAllPoints()
+            if tab:IsShown() then
+                if last then
+                    tab:SetPoint("LEFT", last, "RIGHT", self.spacing, 0)
+                    width = width + self.spacing
+                else
+                    tab:SetPoint("LEFT", self, "LEFT", 0, 0)
+                end
+                width = width + tab:GetWidth()
+                last = tab
+            end
+        end
+        self:SetSize(math.max(1, width), 32)
+    end
+    function bar:SetTabVisuallySelected(tabID)
+        self.selectedTabID = tabID
+        for _, tab in ipairs(self.tabs) do
+            tab:SetTabSelected(tab:GetTabID() == tabID)
+        end
+    end
+    function bar:SetTab(tabID, isUserAction)
+        if not (self.tabSelectedCallback and self.tabSelectedCallback(tabID, isUserAction)) then
+            self:SetTabVisuallySelected(tabID)
+        end
+    end
+    function bar:AddTab(_, tabIcon)
+        local tabID = #self.tabs + 1
+        local button = TrainerSpells:CreateIconTabButton(self, tabIcon, nil, function(sel)
+            local wasSelected = sel.isSelected
+            self:SetTab(tabID, true)
+            if not wasSelected and sel.isSelected and PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_TAB then
+                PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB)
+            end
+        end)
+        button.tabID = tabID
+        self.tabs[tabID] = button
+        self:Layout()
+        return tabID
+    end
+    function bar:GetTabButton(tabID)
+        return self.tabs[tabID]
+    end
+    function bar:SetTabShown(tabID, shown)
+        local tab = self.tabs[tabID]
+        if tab then
+            tab:SetShown(shown)
+            self:Layout()
+        end
+    end
+    return bar
+end
+
 TrainerSpells.SecureMapClick = {}
 
 function TrainerSpells.SecureMapClick.Release()
@@ -170,7 +318,7 @@ function TrainerSpells.SecureMapClick.Release()
 end
 
 function TrainerSpells.SecureMapClick.IsAvailable()
-    if InCombatLockdown() or not (ProfessionsFrame and ProfessionsFrame:IsShown()) then return false end
+    if InCombatLockdown() or not TrainerSpells.HasProtectedPanelShown() then return false end
     if not WorldMapFrame or WorldMapFrame:IsShown() then return false end
     return QuestLogMicroButton ~= nil and QuestLogMicroButton:IsEnabled() and true or false
 end
@@ -474,7 +622,7 @@ end
 
 function TrainerSpells:OpenWorldMapAt(uiMapID)
     if not WorldMapFrame then return end
-    if ProfessionsFrame and ProfessionsFrame:IsShown() then
+    if TrainerSpells.HasProtectedPanelShown() then
         if WorldMapFrame:IsShown() and WorldMapFrame.SetMapID then WorldMapFrame:SetMapID(uiMapID) end
         return
     end

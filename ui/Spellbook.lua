@@ -841,9 +841,6 @@ function TrainerSpells:UpdateClassViewTabs()
     playerSpellsSubTabs.Update()
 end
 
-function playerSpellsSubTabs.KeepTabEnabled()
-end
-
 function playerSpellsSubTabs.SetClassIcon(icon, classToken)
     local classAtlas = GetClassAtlas and GetClassAtlas(classToken)
     if icon and classAtlas then
@@ -908,7 +905,7 @@ end
 function playerSpellsSubTabs.Create()
     if playerSpellsSubTabs.bar then return end
     local views = playerSpellsSubTabs.BuildViews()
-    local bar = CreateFrame("Frame", "TrainerSpellsPlayerSpellsSubTabs", classFrame, "TabSystemTemplate")
+    local bar = TrainerSpells:CreateIconTabBar("TrainerSpellsPlayerSpellsSubTabs", classFrame)
     bar:SetTabSelectedCallback(function(tabID)
         local entry = views[tabID]
         if entry then
@@ -921,8 +918,6 @@ function playerSpellsSubTabs.Create()
     for index, entry in ipairs(views) do
         bar:AddTab(nil, entry.icon)
         local button = bar:GetTabButton(index)
-        button.SetEnabled = playerSpellsSubTabs.KeepTabEnabled
-        button:Enable()
         button:SetTooltipText(entry.title .. "\n|cffffffff" .. TrainerSpells:Trans(entry.desc) .. "|r")
         if entry.classToken then playerSpellsSubTabs.SetClassIcon(button.Icon, entry.classToken) end
     end
@@ -1003,35 +998,25 @@ local function CreatePlayerSpellsModeTabs(book, tabSystem)
     playerSpellsModeDivider = divider
     divider:SetAtlas("spellbook-divider")
     divider:SetHeight(11)
-    local tab = CreateFrame("Button", nil, container, "TabSystemButtonTemplate")
-    tab.GetTabSystem = function() return tabSystem end
-    tab:Init(1, nil, TrainerSpells:GetAddonIcon())
-    tab.SetEnabled = playerSpellsSubTabs.KeepTabEnabled
-    tab:Enable()
-    tab:SetTooltipText("TrainerSpells")
-    tab:SetPoint("LEFT", container, "LEFT", 0, 0)
-    tab:SetScript("OnClick", function()
+    local tab = TrainerSpells:CreateIconTabButton(container, TrainerSpells:GetAddonIcon(), "TrainerSpells", function()
         TrainerSpells:SetClassView(playerSpellsSubTabs.GetSavedView())
         OpenPlayerSpellsPanel()
     end)
+    tab.tabID = 1
+    tab:SetPoint("LEFT", container, "LEFT", 0, 0)
 
     playerSpellsModeTabs.addon = tab
     playerSpellsModeLastTab = tab
     playerSpellsSubTabs.Create()
     playerSpellsSubTabs.viewTabs = {}
     for index, entry in ipairs(playerSpellsSubTabs.allViews) do
-        local viewTab = CreateFrame("Button", nil, container, "TabSystemButtonTemplate")
-        viewTab.GetTabSystem = function() return tabSystem end
-        viewTab:Init(100 + index, nil, entry.icon)
-        viewTab.SetEnabled = playerSpellsSubTabs.KeepTabEnabled
-        viewTab:Enable()
-        viewTab:SetTooltipText(entry.title)
-        if entry.classToken then playerSpellsSubTabs.SetClassIcon(viewTab.Icon, entry.classToken) end
-        viewTab.view = entry.view
-        viewTab:SetScript("OnClick", function()
+        local viewTab = TrainerSpells:CreateIconTabButton(container, entry.icon, entry.title, function()
             TrainerSpells:SetClassView(entry.view)
             OpenPlayerSpellsPanel()
         end)
+        viewTab.tabID = 100 + index
+        if entry.classToken then playerSpellsSubTabs.SetClassIcon(viewTab.Icon, entry.classToken) end
+        viewTab.view = entry.view
         viewTab:Hide()
         table.insert(playerSpellsSubTabs.viewTabs, viewTab)
     end
