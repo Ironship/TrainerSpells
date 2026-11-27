@@ -158,6 +158,83 @@ local function GetRowCollapseButton(rowFrame)
     return button
 end
 
+TrainerSpells.SecureMapClick = {}
+
+function TrainerSpells.SecureMapClick.Release()
+    local overlay = TrainerSpells.SecureMapClick.overlay
+    if not overlay or InCombatLockdown() then return end
+    overlay.target = nil
+    overlay.placed = nil
+    overlay:ClearAllPoints()
+    overlay:Hide()
+end
+
+function TrainerSpells.SecureMapClick.IsAvailable()
+    if InCombatLockdown() or not (ProfessionsFrame and ProfessionsFrame:IsShown()) then return false end
+    if not WorldMapFrame or WorldMapFrame:IsShown() then return false end
+    return QuestLogMicroButton ~= nil and QuestLogMicroButton:IsEnabled() and true or false
+end
+
+function TrainerSpells.SecureMapClick.Create()
+    local overlay = CreateFrame("Button", "TrainerSpellsSecureMapClick", UIParent, "SecureActionButtonTemplate")
+    overlay:SetFrameStrata("FULLSCREEN_DIALOG")
+    overlay:RegisterForClicks("LeftButtonUp")
+    overlay:SetAttribute("useOnKeyDown", false)
+    overlay:SetAttribute("type1", "click")
+    overlay:Hide()
+    overlay:SetScript("OnEnter", function(self)
+        local script = self.target and self.target:GetScript("OnEnter")
+        if script then script(self.target) end
+    end)
+    overlay:SetScript("OnLeave", function(self)
+        local script = self.target and self.target:GetScript("OnLeave")
+        if script then script(self.target) end
+        TrainerSpells.SecureMapClick.Release()
+    end)
+    overlay:SetScript("PostClick", function(self, mouseButton)
+        local location = self.target and self.target.tsWaypointLocation
+        TrainerSpells.SecureMapClick.Release()
+        GameTooltip:Hide()
+        if mouseButton == "LeftButton" and location then TrainerSpells:SetMapWaypoint(location) end
+    end)
+    overlay:SetScript("OnUpdate", function(self)
+        if not self.target or not self.target:IsVisible() or not TrainerSpells.SecureMapClick.IsAvailable() or not TrainerSpells.SecureMapClick.Place(self) then TrainerSpells.SecureMapClick.Release() end
+    end)
+    overlay:RegisterEvent("PLAYER_REGEN_DISABLED")
+    overlay:SetScript("OnEvent", TrainerSpells.SecureMapClick.Release)
+    TrainerSpells.SecureMapClick.overlay = overlay
+    return overlay
+end
+
+function TrainerSpells.SecureMapClick.Place(overlay)
+    if InCombatLockdown() then return true end
+    local target = overlay.target
+    local left, bottom, width, height = target:GetLeft(), target:GetBottom(), target:GetWidth(), target:GetHeight()
+    if not (left and bottom and width and height) or width <= 0 or height <= 0 then return false end
+    local scale = target:GetEffectiveScale() / overlay:GetEffectiveScale()
+    local key = ("%.2f:%.2f:%.2f:%.2f"):format(left * scale, bottom * scale, width * scale, height * scale)
+    if overlay.placed == key then return true end
+    overlay.placed = key
+    overlay:ClearAllPoints()
+    overlay:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale, bottom * scale)
+    overlay:SetSize(width * scale, height * scale)
+    return true
+end
+
+function TrainerSpells.SecureMapClick.Attach(button)
+    if not TrainerSpells.SecureMapClick.IsAvailable() then return end
+    local overlay = TrainerSpells.SecureMapClick.overlay or TrainerSpells.SecureMapClick.Create()
+    if overlay.target == button and overlay:IsShown() then return end
+    overlay.target = button
+    overlay.placed = nil
+    if not TrainerSpells.SecureMapClick.Place(overlay) then
+        TrainerSpells.SecureMapClick.Release()
+        return
+    end
+    overlay:SetAttribute("clickbutton1", QuestLogMicroButton)
+    overlay:Show()
+end
+
 local function GetRowLocationButton(rowFrame, index)
     rowFrame.locationButtons = rowFrame.locationButtons or {}
     for i = #rowFrame.locationButtons + 1, index do
@@ -397,7 +474,10 @@ end
 
 function TrainerSpells:OpenWorldMapAt(uiMapID)
     if not WorldMapFrame then return end
-    if ProfessionsFrame and ProfessionsFrame:IsShown() then return end
+    if ProfessionsFrame and ProfessionsFrame:IsShown() then
+        if WorldMapFrame:IsShown() and WorldMapFrame.SetMapID then WorldMapFrame:SetMapID(uiMapID) end
+        return
+    end
     if WorldMapFrame.HandleUserActionOpenSelf then
         if C_Map.OpenWorldMap then
             C_Map.OpenWorldMap(uiMapID)
@@ -1302,7 +1382,9 @@ function TrainerSpells:InitScrollRow(rowFrame, elementData, rowHeight)
                     button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
                 end
 
+                button.tsWaypointLocation = locationInfo
                 button:SetScript("OnEnter", function(sel)
+                    TrainerSpells.SecureMapClick.Attach(sel)
                     GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
                     GameTooltip:SetText(locationInfo.questName or locationInfo.npcName or TrainerSpells:Trans("LID_SOURCE"))
                     if locationInfo.questName and locationInfo.npcName then GameTooltip:AddLine(locationInfo.npcName, 1, 0.82, 0) end
